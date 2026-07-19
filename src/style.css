@@ -148,18 +148,21 @@ body {
 
 .sunspot {
   position: absolute;
-  width: 26vmin;
-  height: 26vmin;
-  transform: translate(-50%, -50%);
+  width: 34vmin;
+  height: 22vmin;
+  /* A warm sunbeam pool cast on the floor — elongated, tilted, feathered. */
+  transform: translate(-50%, -50%) rotate(-12deg);
   border-radius: 50%;
   background: radial-gradient(
-    circle,
-    rgba(255, 231, 143, 0.42) 0%,
-    rgba(255, 224, 125, 0.22) 44%,
-    rgba(255, 219, 118, 0) 70%
+    ellipse 60% 60% at 42% 40%,
+    rgba(255, 246, 214, 0.5) 0%,
+    rgba(255, 233, 158, 0.32) 34%,
+    rgba(255, 224, 132, 0.14) 58%,
+    rgba(255, 220, 120, 0) 78%
   );
+  filter: blur(6px);
   pointer-events: none;
-  transition: left 0.4s linear, top 0.4s linear;
+  transition: left 0.5s linear, top 0.5s linear;
 }
 
 .hero-bar {

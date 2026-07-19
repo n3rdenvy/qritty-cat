@@ -212,6 +212,16 @@ function segmentCrossesZones(x0, y0, x1, y1, zones) {
   return false;
 }
 
+// A random point inside the edge buffer that isn't under a white box.
+function pickClearPoint(zones) {
+  for (let i = 0; i < 20; i++) {
+    const x = randRange(EDGE_X, 100 - EDGE_X);
+    const y = randRange(EDGE_Y, 100 - EDGE_Y);
+    if (!inZone(x, y, zones)) return { x, y };
+  }
+  return { x: EDGE_X + 3, y: 100 - EDGE_Y - 3 };
+}
+
 function corridorY(zones) {
   const maxBottom = zones.length ? Math.max(...zones.map((z) => z.bottomPct)) : 72;
   return Math.min(100 - EDGE_Y, maxBottom + 4);
@@ -233,12 +243,18 @@ async function moveAvoiding(record, toX, toY, zones, speedMult = 1) {
   }
 }
 
-async function chaseLaser(record, laserState) {
+async function chaseLaser(record, laserState, getZones) {
   playAction(record, pick(record.config.walkActions));
   while (laserState.active && record.alive) {
-    const tx = Math.max(EDGE_X, Math.min(100 - EDGE_X, laserState.x + randRange(-3, 3)));
-    const ty = Math.max(EDGE_Y, Math.min(100 - EDGE_Y, laserState.y + randRange(-2, 2)));
-    await moveTo(record, tx, ty, randRange(1.0, 1.5));
+    const zones = getZones();
+    let tx = Math.max(EDGE_X, Math.min(100 - EDGE_X, laserState.x + randRange(-3, 3)));
+    let ty = Math.max(EDGE_Y, Math.min(100 - EDGE_Y, laserState.y + randRange(-2, 2)));
+    // Don't dive under the boxes chasing the dot — nudge the pounce point clear.
+    if (inZone(tx, ty, zones)) {
+      tx = laserState.x;
+      ty = corridorY(zones);
+    }
+    await moveAvoiding(record, tx, ty, zones, randRange(0.9, 1.3));
   }
 }
 
@@ -334,7 +350,7 @@ async function useInteraction(record, kind, getZones, laserState) {
   record.wrapper.style.visibility = "";
 }
 
-async function runCatLife(record, getZones, laserState, activeCats, sunState, onExit) {
+async function runCatLife(record, getZones, laserState, activeCats, sunState, propList, onExit) {
   const deadline = Date.now() + randRange(LIFESPAN_MIN, LIFESPAN_MAX);
   const canInteract = record.config.interactions && record.config.interactions.length;
 
@@ -345,7 +361,7 @@ async function runCatLife(record, getZones, laserState, activeCats, sunState, on
 
   while (record.alive) {
     if (laserState.active) {
-      await chaseLaser(record, laserState);
+      await chaseLaser(record, laserState, getZones);
       continue;
     }
 
@@ -374,6 +390,12 @@ async function runCatLife(record, getZones, laserState, activeCats, sunState, on
       continue;
     }
 
+    // Wander over to a bowl / cat tree that's out and hang around it.
+    if (propList.length && Math.random() < 0.4) {
+      await visitProp(record, propList, getZones, laserState);
+      continue;
+    }
+
     // Mostly stay put and idle again; occasionally wander somewhere new.
     if (Math.random() < RELOCATE_CHANCE * record.energy) {
       const target = pickStopTarget(getZones(), activeCats, record);
@@ -394,16 +416,15 @@ async function runCatLife(record, getZones, laserState, activeCats, sunState, on
   onExit(record);
 }
 
-function runLaserEvents(container, laserState) {
+function runLaserEvents(container, laserState, getZones) {
   async function fireLaser() {
     const dot = document.createElement("div");
     dot.className = "laser-dot";
     container.appendChild(dot);
 
-    const waypoints = Array.from({ length: 5 + Math.floor(Math.random() * 3) }, () => ({
-      x: randRange(EDGE_X, 100 - EDGE_X),
-      y: randRange(EDGE_Y, 100 - EDGE_Y),
-    }));
+    // Keep the dot out of the boxes so it never lures cats under the menus.
+    const zones = getZones();
+    const waypoints = Array.from({ length: 5 + Math.floor(Math.random() * 3) }, () => pickClearPoint(zones));
 
     laserState.active = true;
     laserState.x = waypoints[0].x;
@@ -463,9 +484,9 @@ function runSun(container, sunState) {
   setInterval(tick, 140);
 }
 
-// Toys spawn, sit around 11–19s, then fade out — never permanent furniture.
-function runPropEvents(container, getZones) {
-  const activeProps = [];
+// Toys/bowls/tree spawn, hang around a while so cats can visit, then fade out.
+// `propList` is the live list cats read to seek things out.
+function runPropEvents(container, getZones, propList) {
   const MAX_PROPS = 3;
 
   function spawnProp() {
@@ -474,8 +495,8 @@ function runPropEvents(container, getZones) {
     const zones = getZones();
     let x, y;
     for (let i = 0; i < 14; i++) {
-      x = randRange(EDGE_X, 100 - EDGE_X - 4);
-      y = randRange(EDGE_Y + 6, 100 - EDGE_Y - 6);
+      x = randRange(EDGE_X + 3, 100 - EDGE_X - 5);
+      y = randRange(EDGE_Y + 8, 100 - EDGE_Y - 6);
       if (!inZone(x, y, zones)) break;
     }
     const el = document.createElement("div");
@@ -491,7 +512,8 @@ function runPropEvents(container, getZones) {
     el.style.transform = "scale(0.6)";
     el.style.transition = "opacity 0.4s ease, transform 0.4s ease";
     container.appendChild(el);
-    activeProps.push(el);
+    const entry = { el, x, y, kind: prop.kind };
+    propList.push(entry);
 
     void el.offsetWidth;
     el.style.opacity = "0.95";
@@ -502,28 +524,50 @@ function runPropEvents(container, getZones) {
       el.style.transform = "scale(0.6)";
       setTimeout(() => {
         el.remove();
-        const idx = activeProps.indexOf(el);
-        if (idx !== -1) activeProps.splice(idx, 1);
+        const idx = propList.indexOf(entry);
+        if (idx !== -1) propList.splice(idx, 1);
       }, 400);
-    }, randRange(11000, 19000));
+    }, randRange(16000, 28000));
   }
 
   (async function loop() {
     for (;;) {
       await sleep(randRange(4000, 9000));
-      if (activeProps.length < MAX_PROPS) spawnProp();
+      if (propList.length < MAX_PROPS) spawnProp();
     }
   })();
+}
+
+// A cat wanders over to a bowl/tree, settles beside it, and hangs out.
+async function visitProp(record, propList, getZones, laserState) {
+  const props = propList.filter((p) => p.el.isConnected);
+  if (!props.length) return;
+  const prop = pick(props);
+  const zones = getZones();
+  const tx = Math.max(EDGE_X, Math.min(100 - EDGE_X, prop.x + (Math.random() < 0.5 ? -3.5 : 3.5)));
+  const ty = Math.max(EDGE_Y, Math.min(100 - EDGE_Y, prop.y + randRange(-1, 2)));
+  if (inZone(tx, ty, zones)) return;
+  playAction(record, pick(record.config.walkActions));
+  await moveAvoiding(record, tx, ty, zones);
+  if (!record.alive) return;
+  const until = Date.now() + randRange(5000, 11000);
+  while (record.alive && !laserState.active && Date.now() < until) {
+    playAction(record, pick(record.config.idleActions));
+    if (Math.random() < EMOTE_CHANCE) showEmotion(record);
+    const s = await waitInterruptible(randRange(2600, 4600), record, laserState);
+    if (s !== "done") break;
+  }
 }
 
 export function initCritterScene(container, zoneSelectors = [".controls-square", ".qr-square"]) {
   const laserState = { active: false, x: 50, y: 50 };
   const sunState = { x: 5, y: 50 };
   const activeCats = [];
+  const propList = [];
   const getZones = () => computeZones(container, zoneSelectors);
 
   runSun(container, sunState);
-  runPropEvents(container, getZones);
+  runPropEvents(container, getZones, propList);
 
   function spawnCat(forcedType) {
     const typeKey = forcedType || pick(CAT_TYPES);
@@ -564,7 +608,7 @@ export function initCritterScene(container, zoneSelectors = [".controls-square",
     };
     activeCats.push(record);
 
-    runCatLife(record, getZones, laserState, activeCats, sunState, (finished) => {
+    runCatLife(record, getZones, laserState, activeCats, sunState, propList, (finished) => {
       const idx = activeCats.indexOf(finished);
       if (idx !== -1) activeCats.splice(idx, 1);
       // Each despawn breeds a replacement 6s later — steady turnover.
@@ -582,5 +626,5 @@ export function initCritterScene(container, zoneSelectors = [".controls-square",
     if (activeCats.length < TARGET_POPULATION) spawnCat();
   }, 9000);
 
-  runLaserEvents(container, laserState);
+  runLaserEvents(container, laserState, getZones);
 }
