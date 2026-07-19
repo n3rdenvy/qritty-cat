@@ -10,6 +10,8 @@ import catTortoiseshell from "./assets/critters/cat-tortoiseshell.png";
 import catTree from "./assets/critters/cat-tree.png";
 import foodBowls from "./assets/critters/food-bowls.png";
 import emotionBubbles from "./assets/critters/emotion-bubbles.png";
+import orangeWheel from "./assets/critters/cat-orange-wheel.png";
+import greyTabbyWheel from "./assets/critters/cat-greytabby-wheel.png";
 
 // 8-row sheets: turn, walk, standBack, walk2, sit, sit2, prowl, sleep.
 function catActions8() {
@@ -121,6 +123,11 @@ export const CRITTERS = {
   catTortoiseshell: newCat(catTortoiseshell, 55),
 };
 
+// Which breeds can play which prop-interaction vignettes (only breeds with
+// dedicated "active" sheets). Orange + grey tabby get the treadmill wheel.
+CRITTERS.catOrange.interactions = ["wheel"];
+CRITTERS.catGreyTabby.interactions = ["wheel"];
+
 export const CAT_TYPES = [
   "catWhite",
   "catBlack",
@@ -151,3 +158,34 @@ export const EMOTION_SPRITES = [
   { x: 1300, y: 1212, w: 140, h: 128, sheetW: 1792, sheetH: 2390 },
   { x: 1610, y: 1201, w: 164, h: 221, sheetW: 1792, sheetH: 2390 },
 ].map((s) => ({ ...s, sheet: emotionBubbles }));
+
+// Prop-interaction vignettes. Each frame is [x, y, w, h] in the sheet; the
+// player anchors every frame by its bottom-center so the wheel/cat stays
+// planted. `scale` sizes the whole vignette; phases play getOn → run(loop) →
+// slowDown → getOff. Coords mapped from the labeled sprite sheets.
+export const INTERACTIONS = {
+  wheel: {
+    catOrange: {
+      sheet: orangeWheel,
+      sheetW: 720,
+      sheetH: 1488,
+      scale: 0.9,
+      fps: 7,
+      getOn: [[13, 416, 169, 133], [178, 416, 179, 134], [392, 413, 138, 134], [564, 413, 138, 134], [25, 585, 136, 133], [204, 584, 139, 134]],
+      run: [[27, 778, 129, 131], [206, 778, 130, 131], [386, 778, 130, 131], [566, 778, 130, 131], [27, 953, 129, 131], [206, 953, 130, 131], [386, 953, 130, 131], [566, 953, 130, 133]],
+      slowDown: [[34, 1177, 113, 90], [215, 1183, 113, 84], [399, 1187, 106, 78], [569, 1136, 125, 131]],
+      getOff: [[27, 1318, 155, 128], [178, 1318, 184, 127], [358, 1318, 184, 127], [538, 1361, 155, 84]],
+    },
+    catGreyTabby: {
+      sheet: greyTabbyWheel,
+      sheetW: 1440,
+      sheetH: 2976,
+      scale: 0.46,
+      fps: 7,
+      getOn: [[31, 833, 329, 261], [360, 837, 350, 257], [789, 830, 265, 256], [1132, 830, 266, 256], [54, 1174, 263, 256], [414, 1174, 264, 256]],
+      run: [[58, 1559, 250, 254], [417, 1560, 251, 253], [778, 1560, 250, 254], [1137, 1560, 250, 253], [58, 1910, 250, 254], [417, 1910, 251, 254], [778, 1911, 250, 253], [1137, 1911, 249, 253]],
+      slowDown: [[72, 2370, 218, 156], [477, 2356, 139, 170], [803, 2374, 201, 152], [1142, 2277, 242, 249]],
+      getOff: [[58, 2640, 240, 246], [339, 2640, 238, 246], [617, 2640, 246, 246], [931, 2677, 189, 209], [1152, 2688, 229, 198]],
+    },
+  },
+};

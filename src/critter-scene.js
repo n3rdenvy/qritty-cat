@@ -1,4 +1,4 @@
-import { CRITTERS, CAT_TYPES, PROPS, EMOTION_SPRITES } from "./critter-sprites.js";
+import { CRITTERS, CAT_TYPES, PROPS, EMOTION_SPRITES, INTERACTIONS } from "./critter-sprites.js";
 
 // Global frame-rate damper — cats were spazzing; everything animates calmer.
 const CALM = 0.55;
@@ -269,8 +269,70 @@ async function baskInSun(record, sunState, laserState, zones) {
   }
 }
 
+// Plays an explicit-frame vignette (each frame anchored bottom-center at the
+// ground point) — getOn → run (looped) → slowDown → getOff. Returns when done.
+async function playVignette(container, def, gxPct, gyPct, record, laserState) {
+  const wrap = document.createElement("div");
+  wrap.className = "critter-vignette";
+  wrap.style.left = `${gxPct}%`;
+  wrap.style.top = `${gyPct}%`;
+  const frameEl = document.createElement("div");
+  frameEl.style.position = "absolute";
+  frameEl.style.backgroundImage = `url(${def.sheet})`;
+  frameEl.style.backgroundRepeat = "no-repeat";
+  frameEl.style.imageRendering = "pixelated";
+  frameEl.style.backgroundSize = `${def.sheetW * def.scale}px ${def.sheetH * def.scale}px`;
+  wrap.appendChild(frameEl);
+  container.appendChild(wrap);
+
+  const S = def.scale;
+  function show(fr) {
+    frameEl.style.width = `${fr[2] * S}px`;
+    frameEl.style.height = `${fr[3] * S}px`;
+    frameEl.style.left = `${-(fr[2] * S) / 2}px`;
+    frameEl.style.top = `${-fr[3] * S}px`;
+    frameEl.style.backgroundPosition = `${-fr[0] * S}px ${-fr[1] * S}px`;
+  }
+
+  const runLoops = 2 + Math.floor(Math.random() * 3);
+  const sequence = [...def.getOn];
+  for (let i = 0; i < runLoops; i++) sequence.push(...def.run);
+  sequence.push(...def.slowDown, ...def.getOff);
+
+  const frameMs = 1000 / (def.fps * record.fpsMult);
+  for (const fr of sequence) {
+    if (!record.alive || laserState.active) break;
+    show(fr);
+    await sleep(frameMs);
+  }
+  wrap.remove();
+}
+
+// A sheeted cat ambles to a clear spot, hides its roaming sprite, and plays a
+// prop vignette (e.g. running on the treadmill wheel) in its place.
+async function useInteraction(record, kind, getZones, laserState) {
+  const def = INTERACTIONS[kind] && INTERACTIONS[kind][record.typeKey];
+  if (!def) return;
+  const zones = getZones();
+  let gx = record.x;
+  let gy = Math.min(100 - EDGE_Y, Math.max(EDGE_Y + 10, record.y));
+  for (let i = 0; i < 12; i++) {
+    const cx = randRange(EDGE_X + 6, 100 - EDGE_X - 6);
+    const cy = randRange(EDGE_Y + 12, 100 - EDGE_Y);
+    if (!inZone(cx, cy, zones)) { gx = cx; gy = cy; break; }
+  }
+  playAction(record, pick(record.config.walkActions));
+  await moveAvoiding(record, gx, gy, zones);
+  if (!record.alive) return;
+  record.wrapper.style.visibility = "hidden";
+  stopFrames(record);
+  await playVignette(record.wrapper.parentElement, def, gx, gy, record, laserState);
+  record.wrapper.style.visibility = "";
+}
+
 async function runCatLife(record, getZones, laserState, activeCats, sunState, onExit) {
   const deadline = Date.now() + randRange(LIFESPAN_MIN, LIFESPAN_MAX);
+  const canInteract = record.config.interactions && record.config.interactions.length;
 
   // Walk in from off-screen to a first resting spot.
   const first = pickStopTarget(getZones(), activeCats, record);
@@ -295,6 +357,12 @@ async function runCatLife(record, getZones, laserState, activeCats, sunState, on
     if (Math.random() < EMOTE_CHANCE * 0.7) showEmotion(record);
 
     if (Date.now() > deadline) break;
+
+    // Sheeted breeds occasionally go play with their prop (e.g. the wheel).
+    if (canInteract && Math.random() < 0.28) {
+      await useInteraction(record, pick(record.config.interactions), getZones, laserState);
+      continue;
+    }
 
     // Mostly stay put and idle again; occasionally wander somewhere new.
     if (Math.random() < RELOCATE_CHANCE * record.energy) {

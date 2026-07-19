@@ -1,0 +1,1269 @@
+{
+ "sheets": [
+  {
+   "sheet": "orange-wheel",
+   "sheetW": 720,
+   "sheetH": 1488,
+   "isGrid": false,
+   "cols": 4,
+   "cellW": 180,
+   "sequences": [
+    {
+     "name": "approach",
+     "view": "side-right",
+     "frames": [
+      {
+       "x": 22,
+       "y": 131,
+       "w": 94,
+       "h": 77
+      },
+      {
+       "x": 210,
+       "y": 133,
+       "w": 94,
+       "h": 75
+      },
+      {
+       "x": 360,
+       "y": 74,
+       "w": 182,
+       "h": 134
+      },
+      {
+       "x": 538,
+       "y": 74,
+       "w": 165,
+       "h": 134
+      },
+      {
+       "x": 21,
+       "y": 229,
+       "w": 161,
+       "h": 134
+      },
+      {
+       "x": 178,
+       "y": 229,
+       "w": 184,
+       "h": 134
+      },
+      {
+       "x": 358,
+       "y": 229,
+       "w": 129,
+       "h": 134
+      },
+      {
+       "x": 576,
+       "y": 229,
+       "w": 127,
+       "h": 134
+      }
+     ]
+    },
+    {
+     "name": "getOn",
+     "view": "side-right",
+     "frames": [
+      {
+       "x": 13,
+       "y": 416,
+       "w": 169,
+       "h": 133
+      },
+      {
+       "x": 178,
+       "y": 416,
+       "w": 179,
+       "h": 134
+      },
+      {
+       "x": 392,
+       "y": 413,
+       "w": 138,
+       "h": 134
+      },
+      {
+       "x": 564,
+       "y": 413,
+       "w": 138,
+       "h": 134
+      },
+      {
+       "x": 25,
+       "y": 585,
+       "w": 136,
+       "h": 133
+      },
+      {
+       "x": 204,
+       "y": 584,
+       "w": 139,
+       "h": 134
+      }
+     ]
+    },
+    {
+     "name": "run",
+     "view": "side-right",
+     "frames": [
+      {
+       "x": 27,
+       "y": 778,
+       "w": 129,
+       "h": 131
+      },
+      {
+       "x": 206,
+       "y": 778,
+       "w": 130,
+       "h": 131
+      },
+      {
+       "x": 386,
+       "y": 778,
+       "w": 130,
+       "h": 131
+      },
+      {
+       "x": 566,
+       "y": 778,
+       "w": 130,
+       "h": 131
+      },
+      {
+       "x": 27,
+       "y": 953,
+       "w": 129,
+       "h": 131
+      },
+      {
+       "x": 206,
+       "y": 953,
+       "w": 130,
+       "h": 131
+      },
+      {
+       "x": 386,
+       "y": 953,
+       "w": 130,
+       "h": 131
+      },
+      {
+       "x": 566,
+       "y": 953,
+       "w": 130,
+       "h": 133
+      }
+     ]
+    },
+    {
+     "name": "slowDown",
+     "view": "side-right",
+     "frames": [
+      {
+       "x": 34,
+       "y": 1177,
+       "w": 113,
+       "h": 90
+      },
+      {
+       "x": 215,
+       "y": 1183,
+       "w": 113,
+       "h": 84
+      },
+      {
+       "x": 399,
+       "y": 1187,
+       "w": 106,
+       "h": 78
+      },
+      {
+       "x": 569,
+       "y": 1136,
+       "w": 125,
+       "h": 131
+      }
+     ]
+    },
+    {
+     "name": "getOff",
+     "view": "side-right",
+     "frames": [
+      {
+       "x": 27,
+       "y": 1318,
+       "w": 155,
+       "h": 128
+      },
+      {
+       "x": 178,
+       "y": 1318,
+       "w": 184,
+       "h": 127
+      },
+      {
+       "x": 358,
+       "y": 1318,
+       "w": 184,
+       "h": 127
+      },
+      {
+       "x": 538,
+       "y": 1361,
+       "w": 155,
+       "h": 84
+      }
+     ]
+    }
+   ],
+   "notes": "NOT a clean uniform grid, so isGrid=false. It IS a 4-column layout with uniform 180px column pitch (column x-origins: 0, 180, 360, 540), but row heights vary and text-label bands sit between phase groups, so a single cellW/cellH grid would clip wheels or bake in label text. cellW=180 is reliable; there is no single cellH. Rects above are tight content bounding boxes (2px pad) verified by cropping+reading every frame in a montage \u2014 all 32 frames are clean, no title/label text baked in, one frame each.\n\nLayout: y22-52 = overall sheet title \"ORANGE CAT TREADMILL SEQUENCE\" (excluded). Five phase labels sit in-line at the top-left of their first art row (APPROACH ~y88-114, GET ON, RUN, SLOW DOWN, GET OFF). The APPROACH label overlapped col0 fully and bled the letter \"H\" into col1, so I restricted approach frames 0-1 to y>=130 to exclude it \u2014 confirmed clean.\n\nFrame counts: approach 8 (2 rows of 4), getOn 6 (a row of 4 + a row of 2; cols 2-3 of the 2nd getOn row are empty), run 8 (2 rows of 4), slowDown 4, getOff 4. Total 32.\n\nConfidence HIGH on: run (all 8), slowDown, getOff, getOn \u2014 verified clean and, for run, uniformly sized (~130x131) and well-registered, which is the important looping cycle. \n\nConfidence MEDIUM / flags: (1) approach and getOff frames are heterogeneous in size \u2014 some are small standalone cats, some are full wheels \u2014 because the source art genuinely varies; they will not be pixel-registered to each other, so the app should center each frame in its viewport rather than assume a common cell. (2) A few wheel boxes are wider than 180 due to the 2px pad plus wheels being centered and slightly wider than the column (e.g. approachA2 w=182, approachB1 w=184, getOff1/2 w=184), giving ~2-6px horizontal overlap with the neighboring column; if the slicer needs strictly non-overlapping cells, clamp each to its 180px column (x = col*180, w = 180). (3) getOn frame count = 6, not 8 \u2014 verified cols 2-3 of the second getOn row are blank. All view directions are the cat facing right (side view)."
+  },
+  {
+   "sheet": "/Users/gay_villain/Projects/Qritter Cats/grey tabby wheel.png",
+   "sheetW": 1440,
+   "sheetH": 2976,
+   "isGrid": true,
+   "cellW": 360,
+   "cellH": 372,
+   "cols": 4,
+   "rows": 8,
+   "sequences": [
+    {
+     "name": "approach",
+     "view": "side-right",
+     "frames": [
+      {
+       "x": 50,
+       "y": 267,
+       "w": 178,
+       "h": 105
+      },
+      {
+       "x": 425,
+       "y": 273,
+       "w": 177,
+       "h": 99
+      },
+      {
+       "x": 725,
+       "y": 151,
+       "w": 355,
+       "h": 221
+      },
+      {
+       "x": 1080,
+       "y": 151,
+       "w": 321,
+       "h": 221
+      },
+      {
+       "x": 50,
+       "y": 463,
+       "w": 310,
+       "h": 259
+      },
+      {
+       "x": 360,
+       "y": 463,
+       "w": 360,
+       "h": 259
+      },
+      {
+       "x": 720,
+       "y": 462,
+       "w": 250,
+       "h": 260
+      },
+      {
+       "x": 1157,
+       "y": 463,
+       "w": 244,
+       "h": 259
+      }
+     ]
+    },
+    {
+     "name": "getOn",
+     "view": "side-right",
+     "frames": [
+      {
+       "x": 31,
+       "y": 833,
+       "w": 329,
+       "h": 261
+      },
+      {
+       "x": 360,
+       "y": 837,
+       "w": 350,
+       "h": 257
+      },
+      {
+       "x": 789,
+       "y": 830,
+       "w": 265,
+       "h": 256
+      },
+      {
+       "x": 1132,
+       "y": 830,
+       "w": 266,
+       "h": 256
+      },
+      {
+       "x": 54,
+       "y": 1174,
+       "w": 263,
+       "h": 256
+      },
+      {
+       "x": 414,
+       "y": 1174,
+       "w": 264,
+       "h": 256
+      }
+     ]
+    },
+    {
+     "name": "run",
+     "view": "side-right",
+     "frames": [
+      {
+       "x": 58,
+       "y": 1559,
+       "w": 250,
+       "h": 254
+      },
+      {
+       "x": 417,
+       "y": 1560,
+       "w": 251,
+       "h": 253
+      },
+      {
+       "x": 778,
+       "y": 1560,
+       "w": 250,
+       "h": 254
+      },
+      {
+       "x": 1137,
+       "y": 1560,
+       "w": 250,
+       "h": 253
+      },
+      {
+       "x": 58,
+       "y": 1910,
+       "w": 250,
+       "h": 254
+      },
+      {
+       "x": 417,
+       "y": 1910,
+       "w": 251,
+       "h": 254
+      },
+      {
+       "x": 778,
+       "y": 1911,
+       "w": 250,
+       "h": 253
+      },
+      {
+       "x": 1137,
+       "y": 1911,
+       "w": 249,
+       "h": 253
+      }
+     ]
+    },
+    {
+     "name": "slowDown",
+     "view": "side-right",
+     "frames": [
+      {
+       "x": 72,
+       "y": 2370,
+       "w": 218,
+       "h": 156
+      },
+      {
+       "x": 477,
+       "y": 2356,
+       "w": 139,
+       "h": 170
+      },
+      {
+       "x": 803,
+       "y": 2374,
+       "w": 201,
+       "h": 152
+      },
+      {
+       "x": 1142,
+       "y": 2277,
+       "w": 242,
+       "h": 249
+      }
+     ]
+    },
+    {
+     "name": "getOff",
+     "view": "side-right",
+     "frames": [
+      {
+       "x": 58,
+       "y": 2640,
+       "w": 240,
+       "h": 246
+      },
+      {
+       "x": 339,
+       "y": 2640,
+       "w": 238,
+       "h": 246
+      },
+      {
+       "x": 617,
+       "y": 2640,
+       "w": 246,
+       "h": 246
+      },
+      {
+       "x": 931,
+       "y": 2677,
+       "w": 189,
+       "h": 209
+      },
+      {
+       "x": 1152,
+       "y": 2688,
+       "w": 229,
+       "h": 198
+      }
+     ]
+    }
+   ],
+   "notes": "High confidence. Sheet is 1440x2976 = exactly 2x the orange wheel sheet, and the underlying structure is a clean 4-col x 8-row grid of 360x372 cells (col x-origins 0/360/720/1080; row y-origins are multiples of 372). Confirmed by per-cell density + crops. Row 3 has only its first 2 cells filled (cols 2,3 are empty). Phase order follows the printed labels top-to-bottom, reading row-major left-to-right: APPROACH = rows 0-1 (8 frames), GET ON = row 2 + row 3 cols 0-1 (6), RUN = rows 4-5 (8), SLOW DOWN = row 6 (4), GET OFF = row 7. Total 31 frames.\n\nI returned TIGHT per-frame bounding boxes (not full 360x372 cells) on purpose: the title 'GREY TABBY TREADMILL SEQUENCE' and each phase label are drawn in the top whitespace of the label rows (0,2,4,6,7), so full-cell slices would bake that text in. The tight boxes exclude all text \u2014 verified by cropping and viewing approach r0c0, getOn r3c0, run r4c1, and all 5 getOff frames (each shows one clean cat/wheel frame, no text, no neighbor bleed). If the consumer prefers uniform cells for background-position, use x=col*360, y=row*372, w=360, h=372 \u2014 but that WILL include label text on the first cells of label rows.\n\nONE STRUCTURAL EXCEPTION / flag: GET OFF (row 7) contains 5 frames, not 4 \u2014 it does NOT fit the 4-col grid. Frames 0-2 are cat-in-wheel (~240-360px wide, roughly cells 0-2), while frames 3 (leaping cat) and 4 (walking-away cat) are smaller bare-cat sprites packed into the remaining right-hand space and straddle the col-2/col-3 boundary at x=1080. The 5 explicit rects I gave are correct and verified; a naive uniform-cell slicer would merge frame 2's wheel with frame 3's leap in cell 2 and clip frame 3. This is why isGrid is 'true' for the scaffold but GET OFF must use the explicit frame rects.\n\nCamera view is side-on for every sequence (cat runs on the wheel facing right; approach/get-off walking cats also side-profile). All coordinates are in original 1440x2976 sheet pixels."
+  },
+  {
+   "sheet": "White cat active.png",
+   "sheetW": 2692,
+   "sheetH": 1568,
+   "isGrid": false,
+   "sequences": [
+    {
+     "name": "postApproachStart",
+     "view": "front-left",
+     "frames": [
+      {
+       "x": 42,
+       "y": 148,
+       "w": 145,
+       "h": 181
+      },
+      {
+       "x": 425,
+       "y": 148,
+       "w": 157,
+       "h": 181
+      },
+      {
+       "x": 803,
+       "y": 148,
+       "w": 170,
+       "h": 181
+      },
+      {
+       "x": 1181,
+       "y": 148,
+       "w": 177,
+       "h": 181
+      }
+     ]
+    },
+    {
+     "name": "postMainScratch",
+     "view": "front-left",
+     "frames": [
+      {
+       "x": 30,
+       "y": 394,
+       "w": 167,
+       "h": 185
+      },
+      {
+       "x": 210,
+       "y": 394,
+       "w": 176,
+       "h": 185
+      },
+      {
+       "x": 406,
+       "y": 394,
+       "w": 176,
+       "h": 185
+      },
+      {
+       "x": 600,
+       "y": 394,
+       "w": 178,
+       "h": 185
+      },
+      {
+       "x": 794,
+       "y": 394,
+       "w": 179,
+       "h": 185
+      },
+      {
+       "x": 994,
+       "y": 394,
+       "w": 172,
+       "h": 185
+      },
+      {
+       "x": 1189,
+       "y": 394,
+       "w": 168,
+       "h": 185
+      },
+      {
+       "x": 1379,
+       "y": 394,
+       "w": 168,
+       "h": 185
+      }
+     ]
+    },
+    {
+     "name": "postStopDeparture",
+     "view": "front-left",
+     "frames": [
+      {
+       "x": 1770,
+       "y": 394,
+       "w": 146,
+       "h": 185
+      },
+      {
+       "x": 1957,
+       "y": 394,
+       "w": 161,
+       "h": 185
+      },
+      {
+       "x": 2152,
+       "y": 394,
+       "w": 158,
+       "h": 185
+      },
+      {
+       "x": 2349,
+       "y": 394,
+       "w": 151,
+       "h": 185
+      },
+      {
+       "x": 2540,
+       "y": 394,
+       "w": 151,
+       "h": 185
+      }
+     ]
+    },
+    {
+     "name": "postSideRight",
+     "view": "side-right",
+     "frames": [
+      {
+       "x": 24,
+       "y": 647,
+       "w": 178,
+       "h": 188
+      },
+      {
+       "x": 218,
+       "y": 647,
+       "w": 175,
+       "h": 188
+      },
+      {
+       "x": 412,
+       "y": 647,
+       "w": 176,
+       "h": 188
+      },
+      {
+       "x": 605,
+       "y": 647,
+       "w": 178,
+       "h": 188
+      },
+      {
+       "x": 806,
+       "y": 647,
+       "w": 170,
+       "h": 188
+      },
+      {
+       "x": 999,
+       "y": 647,
+       "w": 169,
+       "h": 188
+      },
+      {
+       "x": 1190,
+       "y": 647,
+       "w": 169,
+       "h": 188
+      },
+      {
+       "x": 1382,
+       "y": 647,
+       "w": 168,
+       "h": 188
+      },
+      {
+       "x": 1572,
+       "y": 647,
+       "w": 170,
+       "h": 188
+      }
+     ]
+    },
+    {
+     "name": "postBackLeft",
+     "view": "back-left",
+     "frames": [
+      {
+       "x": 1792,
+       "y": 647,
+       "w": 132,
+       "h": 188
+      },
+      {
+       "x": 1982,
+       "y": 647,
+       "w": 130,
+       "h": 188
+      },
+      {
+       "x": 2164,
+       "y": 647,
+       "w": 140,
+       "h": 188
+      },
+      {
+       "x": 2355,
+       "y": 647,
+       "w": 141,
+       "h": 188
+      },
+      {
+       "x": 2539,
+       "y": 647,
+       "w": 142,
+       "h": 188
+      }
+     ]
+    },
+    {
+     "name": "tunnelApproachEnter",
+     "view": "side-long",
+     "frames": [
+      {
+       "x": 24,
+       "y": 993,
+       "w": 166,
+       "h": 117
+      },
+      {
+       "x": 205,
+       "y": 993,
+       "w": 386,
+       "h": 117
+      },
+      {
+       "x": 604,
+       "y": 993,
+       "w": 567,
+       "h": 117
+      },
+      {
+       "x": 1186,
+       "y": 993,
+       "w": 368,
+       "h": 117
+      }
+     ]
+    },
+    {
+     "name": "tunnelHoleInteractions",
+     "view": "side-long",
+     "frames": [
+      {
+       "x": 24,
+       "y": 1150,
+       "w": 191,
+       "h": 150
+      },
+      {
+       "x": 215,
+       "y": 1150,
+       "w": 191,
+       "h": 150
+      },
+      {
+       "x": 406,
+       "y": 1150,
+       "w": 191,
+       "h": 150
+      },
+      {
+       "x": 597,
+       "y": 1150,
+       "w": 191,
+       "h": 150
+      },
+      {
+       "x": 788,
+       "y": 1150,
+       "w": 191,
+       "h": 150
+      },
+      {
+       "x": 979,
+       "y": 1150,
+       "w": 191,
+       "h": 150
+      },
+      {
+       "x": 1170,
+       "y": 1150,
+       "w": 191,
+       "h": 150
+      },
+      {
+       "x": 1361,
+       "y": 1150,
+       "w": 191,
+       "h": 150
+      },
+      {
+       "x": 1552,
+       "y": 1150,
+       "w": 191,
+       "h": 150
+      },
+      {
+       "x": 1743,
+       "y": 1150,
+       "w": 191,
+       "h": 150
+      },
+      {
+       "x": 1934,
+       "y": 1150,
+       "w": 191,
+       "h": 150
+      },
+      {
+       "x": 2125,
+       "y": 1150,
+       "w": 191,
+       "h": 150
+      },
+      {
+       "x": 2316,
+       "y": 1150,
+       "w": 191,
+       "h": 150
+      },
+      {
+       "x": 2507,
+       "y": 1150,
+       "w": 185,
+       "h": 150
+      }
+     ]
+    },
+    {
+     "name": "tunnelTopDown",
+     "view": "top-down",
+     "frames": [
+      {
+       "x": 24,
+       "y": 1400,
+       "w": 378,
+       "h": 160
+      },
+      {
+       "x": 404,
+       "y": 1400,
+       "w": 377,
+       "h": 160
+      },
+      {
+       "x": 794,
+       "y": 1360,
+       "w": 557,
+       "h": 200
+      },
+      {
+       "x": 1364,
+       "y": 1360,
+       "w": 370,
+       "h": 200
+      },
+      {
+       "x": 1748,
+       "y": 1360,
+       "w": 371,
+       "h": 200
+      }
+     ]
+    }
+   ],
+   "notes": "Sheet is 2692x1568, white background, IRREGULAR (label-grouped rows, not a clean grid). isGrid=false. Content organized as: title band, then per-section label band, then a sprite row. I found content via non-white mask (channels>245 = background), row/column projection into bands, then cropped and Read representative frames per sequence to confirm each rect is ONE clean frame with no baked-in label text and no neighbor bleed.\n\nCONFIDENCE HIGH for: postMainScratch (8), postStopDeparture (5), postSideRight (9), postBackLeft (5), tunnelTopDown (5). These are clean cat+prop frames; coords are tight bounding boxes verified by crop-and-read.\n\nCONFIDENCE MEDIUM / FLAGS:\n- postApproachStart: The sheet interleaves the 4 cat frames with EMPTY scratching-post cells (at ~x248-385, 641-777, 1029-1165) and then has 5 more IDENTICAL empty-post cells filling the rest of the row (x~1411-2309). I treated those empty posts as generator filler and OMITTED them, returning only the 4 cat-bearing frames. If you want the empty-post 'rest' cells too, they sit on the same ~190px pitch at y148,h181.\n- postMainScratch: a lone fully-scratched post (no cat) sits at x1600-1736,y394 between mainScratch and stopDeparture; I excluded it (transition/damaged-post filler).\n- tunnelApproachEnter: mixed \u2014 frame1 is the cat ALONE (no tunnel), frames 2 and 4 are EMPTY tunnels, frame3 is the cat entering the tunnel. Tunnel lengths vary (386/567/368 px). I returned all 4 as distinct states in order.\n- tunnelHoleInteractions: this row is a clean uniform ~191px pitch, so I emitted it as 14 uniform cells (x0=24, cellW=191, y=1150, h=150). Frame0 = approaching cat, frames1-3 = cat lounging on tunnel, frames4-11 = single tunnels with paw/tail poking through holes, frames12-13 = cat emerging/exiting. The last cell is clipped to w=185 at the sheet's right edge. y-top was pulled to 1150 to exclude the '(Hole Interactions)' label that sits directly above the leftmost sprites; this may clip a few px off the tallest cat-tail tips.\n- tunnelTopDown: y-top is per-frame \u2014 frames 1-2 (under the 'TOP-DOWN ORTHOGONAL VIEW' label) start at y=1400 to exclude the label text; frames 3-5 start at y=1360 to keep the cats' upward-poking tails. Frame3 is a longer tunnel (w557) with a cat sprawled through it \u2014 genuinely one frame, not a merge error.\n- 'SIDE LONG-VIEW (Exit)': the sheet HAS this label but I found NO dedicated Exit sprite row beneath it (the Exit label sits directly on top of the Top-Down label/row). The cat-emerging/exit poses appear only as the last 2 cells of tunnelHoleInteractions. So tunnelExit is effectively absent/missing in this sheet \u2014 flag for the app author.\n- The sheet title text is garbled ('WHITE CA*HELL CAT TUNNEL'), suggesting AI-generated art; this is consistent with the empty-prop filler frames noted above. All returned coords are in ORIGINAL sheet pixels."
+  },
+  {
+   "sheet": "tortoiseshell-active",
+   "sheetW": 1024,
+   "sheetH": 596,
+   "isGrid": false,
+   "sequences": [
+    {
+     "name": "approachStart",
+     "view": "front-left",
+     "frames": [
+      {
+       "x": 16,
+       "y": 63,
+       "w": 56,
+       "h": 57
+      },
+      {
+       "x": 94,
+       "y": 56,
+       "w": 55,
+       "h": 70
+      },
+      {
+       "x": 161,
+       "y": 56,
+       "w": 61,
+       "h": 70
+      },
+      {
+       "x": 243,
+       "y": 56,
+       "w": 53,
+       "h": 70
+      },
+      {
+       "x": 305,
+       "y": 56,
+       "w": 65,
+       "h": 70
+      },
+      {
+       "x": 391,
+       "y": 56,
+       "w": 53,
+       "h": 70
+      },
+      {
+       "x": 448,
+       "y": 56,
+       "w": 69,
+       "h": 70
+      },
+      {
+       "x": 536,
+       "y": 56,
+       "w": 53,
+       "h": 70
+      },
+      {
+       "x": 608,
+       "y": 56,
+       "w": 53,
+       "h": 70
+      },
+      {
+       "x": 680,
+       "y": 56,
+       "w": 54,
+       "h": 70
+      },
+      {
+       "x": 753,
+       "y": 56,
+       "w": 53,
+       "h": 70
+      },
+      {
+       "x": 825,
+       "y": 56,
+       "w": 54,
+       "h": 71
+      }
+     ]
+    },
+    {
+     "name": "mainScratch",
+     "view": "front-left",
+     "frames": [
+      {
+       "x": 11,
+       "y": 149,
+       "w": 65,
+       "h": 72
+      },
+      {
+       "x": 80,
+       "y": 149,
+       "w": 67,
+       "h": 72
+      },
+      {
+       "x": 153,
+       "y": 149,
+       "w": 69,
+       "h": 72
+      },
+      {
+       "x": 227,
+       "y": 149,
+       "w": 69,
+       "h": 72
+      },
+      {
+       "x": 302,
+       "y": 149,
+       "w": 68,
+       "h": 72
+      },
+      {
+       "x": 377,
+       "y": 149,
+       "w": 67,
+       "h": 72
+      },
+      {
+       "x": 450,
+       "y": 149,
+       "w": 67,
+       "h": 72
+      },
+      {
+       "x": 524,
+       "y": 149,
+       "w": 65,
+       "h": 72
+      }
+     ]
+    },
+    {
+     "name": "stopDeparture",
+     "view": "front-left",
+     "frames": [
+      {
+       "x": 608,
+       "y": 149,
+       "w": 54,
+       "h": 72
+      },
+      {
+       "x": 672,
+       "y": 161,
+       "w": 57,
+       "h": 55
+      },
+      {
+       "x": 744,
+       "y": 161,
+       "w": 62,
+       "h": 60
+      },
+      {
+       "x": 816,
+       "y": 161,
+       "w": 63,
+       "h": 60
+      },
+      {
+       "x": 893,
+       "y": 160,
+       "w": 58,
+       "h": 61
+      },
+      {
+       "x": 965,
+       "y": 162,
+       "w": 59,
+       "h": 60
+      }
+     ]
+    },
+    {
+     "name": "sideRight",
+     "view": "side-right",
+     "frames": [
+      {
+       "x": 8,
+       "y": 246,
+       "w": 69,
+       "h": 72
+      },
+      {
+       "x": 83,
+       "y": 246,
+       "w": 67,
+       "h": 73
+      },
+      {
+       "x": 156,
+       "y": 246,
+       "w": 68,
+       "h": 72
+      },
+      {
+       "x": 229,
+       "y": 246,
+       "w": 69,
+       "h": 72
+      },
+      {
+       "x": 304,
+       "y": 246,
+       "w": 68,
+       "h": 72
+      },
+      {
+       "x": 379,
+       "y": 246,
+       "w": 66,
+       "h": 72
+      },
+      {
+       "x": 452,
+       "y": 245,
+       "w": 65,
+       "h": 73
+      },
+      {
+       "x": 525,
+       "y": 246,
+       "w": 65,
+       "h": 72
+      },
+      {
+       "x": 597,
+       "y": 246,
+       "w": 67,
+       "h": 72
+      }
+     ]
+    },
+    {
+     "name": "backLeft",
+     "view": "back-left",
+     "frames": [
+      {
+       "x": 680,
+       "y": 245,
+       "w": 52,
+       "h": 73
+      },
+      {
+       "x": 753,
+       "y": 245,
+       "w": 51,
+       "h": 73
+      },
+      {
+       "x": 822,
+       "y": 245,
+       "w": 55,
+       "h": 73
+      },
+      {
+       "x": 895,
+       "y": 245,
+       "w": 55,
+       "h": 73
+      },
+      {
+       "x": 965,
+       "y": 245,
+       "w": 59,
+       "h": 73
+      }
+     ]
+    },
+    {
+     "name": "tunnelEnter",
+     "view": "side-long",
+     "frames": [
+      {
+       "x": 9,
+       "y": 378,
+       "w": 64,
+       "h": 44
+      },
+      {
+       "x": 77,
+       "y": 381,
+       "w": 148,
+       "h": 39
+      },
+      {
+       "x": 229,
+       "y": 381,
+       "w": 217,
+       "h": 39
+      },
+      {
+       "x": 451,
+       "y": 381,
+       "w": 140,
+       "h": 39
+      }
+     ]
+    },
+    {
+     "name": "tunnelHoles",
+     "view": "side-long",
+     "frames": [
+      {
+       "x": 8,
+       "y": 440,
+       "w": 63,
+       "h": 48
+      },
+      {
+       "x": 80,
+       "y": 440,
+       "w": 72,
+       "h": 54
+      },
+      {
+       "x": 156,
+       "y": 440,
+       "w": 72,
+       "h": 54
+      },
+      {
+       "x": 231,
+       "y": 440,
+       "w": 70,
+       "h": 54
+      },
+      {
+       "x": 303,
+       "y": 443,
+       "w": 71,
+       "h": 51
+      },
+      {
+       "x": 376,
+       "y": 440,
+       "w": 70,
+       "h": 54
+      },
+      {
+       "x": 448,
+       "y": 440,
+       "w": 71,
+       "h": 54
+      },
+      {
+       "x": 521,
+       "y": 440,
+       "w": 70,
+       "h": 54
+      },
+      {
+       "x": 594,
+       "y": 443,
+       "w": 70,
+       "h": 51
+      },
+      {
+       "x": 666,
+       "y": 443,
+       "w": 70,
+       "h": 51
+      },
+      {
+       "x": 738,
+       "y": 443,
+       "w": 71,
+       "h": 51
+      },
+      {
+       "x": 811,
+       "y": 443,
+       "w": 76,
+       "h": 51
+      },
+      {
+       "x": 888,
+       "y": 449,
+       "w": 136,
+       "h": 40
+      }
+     ]
+    },
+    {
+     "name": "tunnelExit",
+     "view": "side-long",
+     "frames": []
+    },
+    {
+     "name": "tunnelTopDown",
+     "view": "top-down",
+     "frames": [
+      {
+       "x": 9,
+       "y": 544,
+       "w": 143,
+       "h": 33
+      },
+      {
+       "x": 156,
+       "y": 535,
+       "w": 142,
+       "h": 42
+      },
+      {
+       "x": 302,
+       "y": 533,
+       "w": 212,
+       "h": 44
+      },
+      {
+       "x": 518,
+       "y": 544,
+       "w": 142,
+       "h": 33
+      },
+      {
+       "x": 666,
+       "y": 530,
+       "w": 140,
+       "h": 47
+      }
+     ]
+    }
+   ],
+   "notes": "Sheet is 1024x596, WHITE background, IRREGULAR (isGrid=false). Content mask = any channel <=245. Method: row-band projection to separate title/label text from frame rows, then per-row column projection (gap=1) to split touching frames, then tight bbox per frame. Verified >=2 crops per sequence at 3x \u2014 all show one clean frame, no baked-in label text, no neighbor bleed.\n\nSCRATCHING POST (front-left rows y56-318): approachStart=12 frames \u2014 an alternating cat-pose / plain-post sequence (frame1 is cat-only walking-in; frames 8-12 are plain posts, kept in order so timing isn't broken). mainScratch=8 (cat scratching + one trailing plain post at frame8). stopDeparture=6 (cat-only, walking away). sideRight=9 and backLeft=5 both cat+post; split at the label boundary x~670 (side-right label x8-126, back-left label x670-784).\n\nTUNNEL (y378-577): tunnelEnter=4 (cat + 3 long side tunnels; frame3 is legitimately wide at w=217 because the cat pokes out the tunnel's right end). tunnelHoles=13 (cat-only frame1 + 12 tunnels; last frame x888 w=136 is a full-length tunnel with the cat exiting the right end \u2014 could arguably belong to the Exit sequence). tunnelTopDown=5 top-down tubes; I subtracted the \"TOP-DOWN ORTHOGONAL VIEW\" label (y519-531, x9-208) from the mask so frames 1-2 don't grab label text \u2014 cat tails that poke above the tubes are preserved (verified).\n\nCONFIDENCE: High on all scratching-post sequences and tunnelEnter/tunnelHoles/tunnelTopDown boundaries (visually verified).\n\nFLAGS:\n1) tunnelExit is EMPTY on this sheet \u2014 the \"SIDE LONG-VIEW (Exit)\" label (y500-512) is immediately followed by the \"TOP-DOWN ORTHOGONAL VIEW\" label with no frame row of its own. No distinct exit-view frames were drawn. Returned with frames:[]. (The full-length tunnel at the end of tunnelHoles, x888, may be the intended \"exit\" moment placed in the holes row.)\n2) tunnelTopDown frame3 (x302,w212) is ~1.5x the others \u2014 verified as ONE continuous tube with the cat threading through (tail out top-left, tail/paw out top-right, head out bottom-center). Confident it's a single frame, but flagging the unusual width in case the source intended it as two.\n3) approachStart frame heights vary (frame1 h=57 cat-only vs h=70 for post frames) \u2014 expected since a frame is the tight bbox of whatever is drawn; if the app needs a uniform cell height use h=71 and a common top of y=56 for that row."
+  }
+ ]
+}
