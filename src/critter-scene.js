@@ -9,7 +9,8 @@ const LIFESPAN_MAX = 45000;
 const EDGE_X = 3.5; // % clear buffer from left/right screen edges before a cat stops
 const EDGE_Y = 5; // % clear buffer from top/bottom screen edges
 const ZONE_PAD = 1.2; // % padding around the white boxes for stop-target rejection
-const EMOTE_CHANCE = 0.375; // 25% more than the prior 0.3
+const EMOTE_CHANCE = 0.55; // lots of little chirps
+const RELOCATE_CHANCE = 0.32; // lower → more cats idling at any moment
 
 // Per-color "activity" — some breeds are lazy, some hyper. Modulates idle
 // dwell time, relocate frequency, and travel speed.
@@ -96,8 +97,9 @@ function moveTo(record, toX, toY, duration) {
   return new Promise((resolve) => {
     const fromX = record.x;
     if (toX !== fromX) {
+      // Sprites are drawn facing RIGHT by default, so face-right = no flip.
       record.facing = toX < fromX ? "left" : "right";
-      record.spriteEl.style.transform = record.facing === "left" ? "scaleX(1)" : "scaleX(-1)";
+      record.spriteEl.style.transform = record.facing === "left" ? "scaleX(-1)" : "scaleX(1)";
     }
     const parts = [`left ${duration}s linear`];
     if (toY != null) parts.push(`top ${duration}s linear`);
@@ -182,8 +184,7 @@ function computeZones(container, selectors) {
 }
 
 // A valid *stop* point: inside the edge buffer, not under a white box, and not
-// crowding another cat. Cats may still WALK across forbidden areas (behind the
-// boxes, near edges) — they just can't come to rest there.
+// crowding another cat.
 function pickStopTarget(zones, activeCats, self) {
   let fallback = null;
   for (let attempt = 0; attempt < 16; attempt++) {
@@ -197,6 +198,37 @@ function pickStopTarget(zones, activeCats, self) {
     if (!crowded) return { x, y };
   }
   return fallback || { x: EDGE_X + 4, y: 100 - EDGE_Y - 4 };
+}
+
+function segmentCrossesZones(x0, y0, x1, y1, zones) {
+  if (!zones.length) return false;
+  const N = 24;
+  for (let i = 1; i < N; i++) {
+    const t = i / N;
+    if (inZone(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, zones)) return true;
+  }
+  return false;
+}
+
+function corridorY(zones) {
+  const maxBottom = zones.length ? Math.max(...zones.map((z) => z.bottomPct)) : 72;
+  return Math.min(100 - EDGE_Y, maxBottom + 4);
+}
+
+// Move, but do our best not to cut under the white boxes. If the straight path
+// would cross a box, detour down through the clear corridor below them.
+async function moveAvoiding(record, toX, toY, zones, speedMult = 1) {
+  const ty = toY == null ? record.y : toY;
+  if (!segmentCrossesZones(record.x, record.y, toX, ty, zones)) {
+    await moveTo(record, toX, toY, travelDuration(record, toX, ty) * speedMult);
+    return;
+  }
+  const cy = corridorY(zones);
+  await moveTo(record, record.x, cy, travelDuration(record, record.x, cy) * speedMult);
+  if (record.alive) await moveTo(record, toX, cy, travelDuration(record, toX, cy) * speedMult);
+  if (record.alive && Math.abs(ty - cy) > 1) {
+    await moveTo(record, toX, ty, travelDuration(record, toX, ty) * speedMult);
+  }
 }
 
 async function chaseLaser(record, laserState) {
@@ -218,21 +250,21 @@ function baskAction(config) {
 
 // A sun-seeker ambles into the sunspot, curls up, and slowly follows the light
 // as it drifts around the boxes.
-async function baskInSun(record, sunState, laserState) {
+async function baskInSun(record, sunState, laserState, zones) {
   playAction(record, pick(record.config.walkActions));
-  await moveTo(record, sunState.x, sunState.y, travelDuration(record, sunState.x, sunState.y) * 1.7);
+  await moveAvoiding(record, sunState.x, sunState.y, zones, 1.7);
 
-  const baskUntil = Date.now() + randRange(7000, 15000);
+  const baskUntil = Date.now() + randRange(9000, 17000);
   const pose = baskAction(record.config);
   while (record.alive && !laserState.active && Date.now() < baskUntil) {
     playAction(record, pose);
     if (Math.random() < EMOTE_CHANCE) showEmotion(record);
-    const signal = await waitInterruptible(randRange(2600, 4600), record, laserState);
+    const signal = await waitInterruptible(randRange(2800, 5000), record, laserState);
     if (signal !== "done") break;
     // Drift after the moving sun, but lazily.
     if (Math.abs(record.x - sunState.x) > 6 || Math.abs(record.y - sunState.y) > 6) {
       playAction(record, pick(record.config.walkActions));
-      await moveTo(record, sunState.x, sunState.y, travelDuration(record, sunState.x, sunState.y) * 2);
+      await moveAvoiding(record, sunState.x, sunState.y, zones, 2);
     }
   }
 }
@@ -243,7 +275,7 @@ async function runCatLife(record, getZones, laserState, activeCats, sunState, on
   // Walk in from off-screen to a first resting spot.
   const first = pickStopTarget(getZones(), activeCats, record);
   playAction(record, pick(record.config.walkActions));
-  await moveTo(record, first.x, first.y, travelDuration(record, first.x, first.y));
+  await moveAvoiding(record, first.x, first.y, getZones());
 
   while (record.alive) {
     if (laserState.active) {
@@ -251,24 +283,27 @@ async function runCatLife(record, getZones, laserState, activeCats, sunState, on
       continue;
     }
 
-    // Idle a while — dwell time scaled by reaction personality + breed energy.
+    // Idle a good while — most cats should be sitting around, not marching.
     playAction(record, pick(record.config.idleActions));
     if (Math.random() < EMOTE_CHANCE) showEmotion(record);
-    const dwell = (randRange(3200, 6800) * record.reactionMult) / record.energy;
+    const dwell = (randRange(4500, 9000) * record.reactionMult) / record.energy;
     const signal = await waitInterruptible(dwell, record, laserState);
     if (signal === "dead") break;
     if (signal === "laser") continue;
 
+    // A second chirp partway through a long sit is common.
+    if (Math.random() < EMOTE_CHANCE * 0.7) showEmotion(record);
+
     if (Date.now() > deadline) break;
 
-    // Sometimes relocate, sometimes just settle in and idle again (calmer).
-    if (Math.random() < 0.5 * record.energy) {
+    // Mostly stay put and idle again; occasionally wander somewhere new.
+    if (Math.random() < RELOCATE_CHANCE * record.energy) {
       if (record.sunSeeker && Math.random() < 0.5) {
-        await baskInSun(record, sunState, laserState);
+        await baskInSun(record, sunState, laserState, getZones());
       } else {
         const target = pickStopTarget(getZones(), activeCats, record);
         playAction(record, pick(record.config.walkActions));
-        await moveTo(record, target.x, target.y, travelDuration(record, target.x, target.y));
+        await moveAvoiding(record, target.x, target.y, getZones());
       }
     }
   }
