@@ -144,6 +144,22 @@ body {
   transition: opacity 0.3s ease;
 }
 
+.sunspot {
+  position: absolute;
+  width: 26vmin;
+  height: 26vmin;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 233, 150, 0.3) 0%,
+    rgba(255, 226, 128, 0.16) 42%,
+    rgba(255, 220, 120, 0) 70%
+  );
+  pointer-events: none;
+  transition: left 0.4s linear, top 0.4s linear;
+}
+
 .hero-bar {
   flex: 0 0 auto;
   display: flex;

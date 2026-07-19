@@ -208,7 +208,36 @@ async function chaseLaser(record, laserState) {
   }
 }
 
-async function runCatLife(record, getZones, laserState, activeCats, onExit) {
+// The pose a cat holds while sunbathing — curl/sleep if the sheet has it, else
+// a loaf sit, else whatever idle it has.
+function baskAction(config) {
+  if (config.actions.sleep) return "sleep";
+  if (config.actions.sit) return "sit";
+  return config.idleActions[0];
+}
+
+// A sun-seeker ambles into the sunspot, curls up, and slowly follows the light
+// as it drifts around the boxes.
+async function baskInSun(record, sunState, laserState) {
+  playAction(record, pick(record.config.walkActions));
+  await moveTo(record, sunState.x, sunState.y, travelDuration(record, sunState.x, sunState.y) * 1.7);
+
+  const baskUntil = Date.now() + randRange(7000, 15000);
+  const pose = baskAction(record.config);
+  while (record.alive && !laserState.active && Date.now() < baskUntil) {
+    playAction(record, pose);
+    if (Math.random() < EMOTE_CHANCE) showEmotion(record);
+    const signal = await waitInterruptible(randRange(2600, 4600), record, laserState);
+    if (signal !== "done") break;
+    // Drift after the moving sun, but lazily.
+    if (Math.abs(record.x - sunState.x) > 6 || Math.abs(record.y - sunState.y) > 6) {
+      playAction(record, pick(record.config.walkActions));
+      await moveTo(record, sunState.x, sunState.y, travelDuration(record, sunState.x, sunState.y) * 2);
+    }
+  }
+}
+
+async function runCatLife(record, getZones, laserState, activeCats, sunState, onExit) {
   const deadline = Date.now() + randRange(LIFESPAN_MIN, LIFESPAN_MAX);
 
   // Walk in from off-screen to a first resting spot.
@@ -234,9 +263,13 @@ async function runCatLife(record, getZones, laserState, activeCats, onExit) {
 
     // Sometimes relocate, sometimes just settle in and idle again (calmer).
     if (Math.random() < 0.5 * record.energy) {
-      const target = pickStopTarget(getZones(), activeCats, record);
-      playAction(record, pick(record.config.walkActions));
-      await moveTo(record, target.x, target.y, travelDuration(record, target.x, target.y));
+      if (record.sunSeeker && Math.random() < 0.5) {
+        await baskInSun(record, sunState, laserState);
+      } else {
+        const target = pickStopTarget(getZones(), activeCats, record);
+        playAction(record, pick(record.config.walkActions));
+        await moveTo(record, target.x, target.y, travelDuration(record, target.x, target.y));
+      }
     }
   }
 
@@ -291,6 +324,34 @@ function runLaserEvents(container, laserState) {
       await fireLaser();
     }
   })();
+}
+
+// A warm sun-spot drifts slowly on a U-shaped path hugging around the boxes.
+// It ping-pongs (never teleports) so the motion stays gentle.
+function runSun(container, sunState) {
+  const el = document.createElement("div");
+  el.className = "sunspot";
+  container.appendChild(el); // appended before cats → renders behind them
+  const HALF_PERIOD = 82000; // ms for one pass down-and-around
+
+  function uPath(t) {
+    if (t < 1 / 3) return { x: 5, y: 12 + (t / (1 / 3)) * (90 - 12) };
+    if (t < 2 / 3) return { x: 5 + ((t - 1 / 3) / (1 / 3)) * (95 - 5), y: 90 };
+    return { x: 95, y: 90 - ((t - 2 / 3) / (1 / 3)) * (90 - 12) };
+  }
+
+  function tick() {
+    const phase = (Date.now() % (HALF_PERIOD * 2)) / (HALF_PERIOD * 2);
+    const t = phase < 0.5 ? phase * 2 : (1 - phase) * 2; // ping-pong 0→1→0
+    const p = uPath(t);
+    sunState.x = p.x;
+    sunState.y = p.y;
+    el.style.left = `${p.x}%`;
+    el.style.top = `${p.y}%`;
+  }
+
+  tick();
+  setInterval(tick, 140);
 }
 
 // Toys spawn, sit around 11–19s, then fade out — never permanent furniture.
@@ -348,9 +409,11 @@ function runPropEvents(container, getZones) {
 
 export function initCritterScene(container, zoneSelectors = [".controls-square", ".qr-square"]) {
   const laserState = { active: false, x: 50, y: 50 };
+  const sunState = { x: 5, y: 50 };
   const activeCats = [];
   const getZones = () => computeZones(container, zoneSelectors);
 
+  runSun(container, sunState);
   runPropEvents(container, getZones);
 
   function spawnCat(forcedType) {
@@ -387,10 +450,12 @@ export function initCritterScene(container, zoneSelectors = [".controls-square",
       reactionMult: randRange(0.8, 1.35),
       moveMult: randRange(0.85, 1.25),
       energy: COLOR_ENERGY[typeKey] || 1,
+      // About a third of cats are drawn to the sun.
+      sunSeeker: Math.random() < 0.35,
     };
     activeCats.push(record);
 
-    runCatLife(record, getZones, laserState, activeCats, (finished) => {
+    runCatLife(record, getZones, laserState, activeCats, sunState, (finished) => {
       const idx = activeCats.indexOf(finished);
       if (idx !== -1) activeCats.splice(idx, 1);
       // Each despawn breeds a replacement 6s later — steady turnover.
