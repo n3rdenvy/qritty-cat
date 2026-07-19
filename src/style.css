@@ -1,0 +1,579 @@
+@font-face {
+  font-family: "Array";
+  src: url("/fonts/Array-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Array";
+  src: url("/fonts/Array-Semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Array";
+  src: url("/fonts/Array-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Khand";
+  src: url("/fonts/Khand-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Khand";
+  src: url("/fonts/Khand-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Khand";
+  src: url("/fonts/Khand-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Khand";
+  src: url("/fonts/Khand-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  --bg: #888d8f;
+  --bg-deep: #6d7274;
+  --ink: #24272a;
+  --ink-soft: #5c6360;
+  --moss: #6fa855;
+  --moss-deep: #4d7a3d;
+  --moss-pale: #eef4ea;
+  --chrome: #7c8a8f;
+  --chrome-deep: #4f5b5f;
+  --chrome-pale: #edf1f1;
+  --card: #fbfbf9;
+  --border: #e2e6e0;
+  --shadow: 0 20px 45px -25px rgba(15, 18, 20, 0.55);
+  --font-head: "Array", system-ui, sans-serif;
+  --font-body: "Khand", system-ui, sans-serif;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--ink);
+  background: radial-gradient(circle at 50% -15%, #a1a6a8 0%, var(--bg) 55%, var(--bg-deep) 100%);
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  height: 100vh;
+  margin: 0 auto;
+  padding: 14px 20px 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.critter-stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.critter {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.critter > div {
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.25));
+}
+
+.critter-prop {
+  position: absolute;
+  image-rendering: pixelated;
+  opacity: 0.9;
+}
+
+.critter-emotion {
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+}
+
+.laser-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: #ff2d2d;
+  box-shadow: 0 0 8px 3px rgba(255, 45, 45, 0.7), 0 0 16px 6px rgba(255, 45, 45, 0.35);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.hero-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.wordmark {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+
+.wordmark .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.hero-bar .badge {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--moss-deep);
+  background: var(--moss-pale);
+  border: 1px solid #d7e6ce;
+  padding: 4px 11px;
+  border-radius: 999px;
+}
+
+.dual-square {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  min-height: 0;
+}
+
+@media (max-width: 820px) {
+  .dual-square {
+    flex-direction: column;
+  }
+}
+
+.mega-square {
+  flex: 0 0 auto;
+  min-width: 0;
+  aspect-ratio: 1;
+  height: min(76vh, 44vw, 520px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 820px) {
+  .mega-square {
+    height: auto;
+    width: min(90vw, 460px);
+  }
+}
+
+.controls-square {
+  padding: 16px 18px;
+  overflow-y: auto;
+}
+
+.qr-square {
+  padding: 18px;
+  align-items: center;
+}
+
+.row-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.row-2-uneven {
+  grid-template-columns: 0.7fr 1.3fr;
+}
+
+.style-grid {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, auto);
+  gap: 8px 10px;
+}
+
+.gradient-toggle-cell {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 2px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--moss-deep);
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: var(--ink);
+}
+
+.field label .icon {
+  width: 13px;
+  height: 13px;
+  color: var(--moss-deep);
+}
+
+.field input[type="text"],
+.field input[type="url"] {
+  width: 100%;
+  padding: 8px 11px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  font-size: 13px;
+  font-family: inherit;
+  background: #f4f6f2;
+  color: var(--ink);
+  transition: border-color 0.15s ease;
+}
+
+.field input[type="text"]:focus,
+.field input[type="url"]:focus {
+  outline: none;
+  border-color: var(--moss);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.color-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 9px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: #f4f6f2;
+}
+
+.color-field input[type="color"] {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.color-field span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.field select {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: #f4f6f2;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.preset-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  outline: 2px solid var(--border);
+  cursor: pointer;
+  transition: transform 0.12s ease, outline-color 0.12s ease;
+}
+
+.preset-dot:hover {
+  transform: translateY(-2px) scale(1.06);
+}
+
+.preset-dot.active {
+  outline-color: var(--ink);
+}
+
+.upload-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 2px dashed var(--chrome);
+  background: var(--chrome-pale);
+  color: var(--chrome-deep);
+  font-weight: 700;
+  font-family: var(--font-head);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.upload-btn .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.filter-chip {
+  border: 2px solid var(--border);
+  background: #f4f6f2;
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.filter-chip.active {
+  border-color: var(--chrome-deep);
+  background: var(--chrome-pale);
+  color: var(--chrome-deep);
+}
+
+.logo-chip {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: var(--border);
+  padding: 4px 8px 4px 4px;
+  border-radius: 999px;
+}
+
+.logo-chip img {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.logo-chip button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--moss-deep);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.qr-frame {
+  background: linear-gradient(160deg, #fff 0%, #eef1ee 100%);
+  border-radius: 22px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  margin-bottom: 14px;
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+#qr-canvas {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#qr-canvas canvas,
+#qr-canvas img,
+#qr-canvas svg {
+  border-radius: 12px;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.download-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: none;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.btn .icon {
+  width: 13px;
+  height: 13px;
+}
+
+.btn-primary {
+  background: var(--moss-deep);
+  color: #fff;
+  box-shadow: 0 10px 20px -8px rgba(77, 122, 61, 0.55);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: linear-gradient(160deg, #f4f6f6 0%, var(--chrome-pale) 100%);
+  color: var(--chrome-deep);
+}
+
+.btn-ghost:hover {
+  transform: translateY(-1px);
+}
+
+.randomize {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--chrome-deep);
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.randomize .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.icon {
+  display: inline-block;
+}
+
+.icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+footer {
+  text-align: center;
+  margin-top: 44px;
+  color: #dfe2e0;
+  font-size: 14px;
+}
