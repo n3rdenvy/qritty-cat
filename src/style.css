@@ -110,18 +110,10 @@ body {
   top: 0;
 }
 
-.critter > div {
-  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.25));
-}
-
 .critter-vignette {
   position: absolute;
   left: 0;
   top: 0;
-}
-
-.critter-vignette > div {
-  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.25));
 }
 
 .critter-prop {
@@ -162,9 +154,9 @@ body {
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(255, 233, 150, 0.3) 0%,
-    rgba(255, 226, 128, 0.16) 42%,
-    rgba(255, 220, 120, 0) 70%
+    rgba(255, 231, 143, 0.42) 0%,
+    rgba(255, 224, 125, 0.22) 44%,
+    rgba(255, 219, 118, 0) 70%
   );
   pointer-events: none;
   transition: left 0.4s linear, top 0.4s linear;

@@ -149,15 +149,28 @@ export const PROPS = [
   { kind: "tree", sheet: catTree, x: 0, y: 0, w: 172, h: 281, sheetW: 172, sheetH: 281, displayH: 128 },
 ];
 
-// Cropped from the new emotion-bubbles sheet (1792x2390), background stripped.
+// All 18 emotes from the emotion-bubbles sheet (1792x2390), exterior stripped
+// but the white speech-bubble interiors preserved so they stay readable.
 export const EMOTION_SPRITES = [
-  { x: 1558, y: 954, w: 64, h: 57, sheetW: 1792, sheetH: 2390 },
-  { x: 1640, y: 954, w: 113, h: 169, sheetW: 1792, sheetH: 2390 },
-  { x: 20, y: 1201, w: 231, h: 221, sheetW: 1792, sheetH: 2390 },
-  { x: 482, y: 1201, w: 200, h: 221, sheetW: 1792, sheetH: 2390 },
-  { x: 1300, y: 1212, w: 140, h: 128, sheetW: 1792, sheetH: 2390 },
-  { x: 1610, y: 1201, w: 164, h: 221, sheetW: 1792, sheetH: 2390 },
-].map((s) => ({ ...s, sheet: emotionBubbles }));
+  { x: 20, y: 946, w: 232, h: 176 },
+  { x: 267, y: 946, w: 205, h: 176 },
+  { x: 486, y: 946, w: 203, h: 176 },
+  { x: 702, y: 946, w: 204, h: 176 },
+  { x: 916, y: 946, w: 202, h: 176 },
+  { x: 1130, y: 946, w: 203, h: 176 },
+  { x: 1346, y: 946, w: 205, h: 176 },
+  { x: 1559, y: 955, w: 63, h: 54 },
+  { x: 1640, y: 955, w: 113, h: 167 },
+  { x: 21, y: 1202, w: 231, h: 219 },
+  { x: 267, y: 1202, w: 201, h: 219 },
+  { x: 482, y: 1202, w: 201, h: 219 },
+  { x: 698, y: 1202, w: 200, h: 219 },
+  { x: 909, y: 1202, w: 199, h: 219 },
+  { x: 1121, y: 1202, w: 180, h: 219 },
+  { x: 1318, y: 1226, w: 104, h: 195 },
+  { x: 1426, y: 1202, w: 171, h: 219 },
+  { x: 1610, y: 1202, w: 165, h: 219 },
+].map((s) => ({ ...s, sheetW: 1792, sheetH: 2390, sheet: emotionBubbles }));
 
 // Prop-interaction vignettes. Each frame is [x, y, w, h] in the sheet; the
 // player anchors every frame by its bottom-center so the wheel/cat stays

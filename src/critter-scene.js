@@ -2,7 +2,7 @@ import { CRITTERS, CAT_TYPES, PROPS, EMOTION_SPRITES, INTERACTIONS } from "./cri
 
 // Global frame-rate damper — cats were spazzing; everything animates calmer.
 const CALM = 0.55;
-const TARGET_POPULATION = 10;
+const TARGET_POPULATION = 8; // 25% fewer than the old 10
 const RESPAWN_DELAY = 6000; // spawn 6s after a despawn
 const LIFESPAN_MIN = 20000;
 const LIFESPAN_MAX = 45000;
@@ -127,7 +127,9 @@ function travelDuration(record, toX, toY) {
 
 function showEmotion(record) {
   const sprite = pick(EMOTION_SPRITES);
-  const displayH = 28 * record.sizeMult;
+  // Bubbles render at a fixed, readable height; the little icons a touch smaller.
+  const targetH = sprite.h < 90 ? 34 : 50;
+  const displayH = targetH * record.sizeMult;
   const scale = displayH / sprite.h;
   const displayW = sprite.w * scale;
   const facingRight = record.facing === "right";
@@ -254,17 +256,19 @@ async function baskInSun(record, sunState, laserState, zones) {
   playAction(record, pick(record.config.walkActions));
   await moveAvoiding(record, sunState.x, sunState.y, zones, 1.7);
 
-  const baskUntil = Date.now() + randRange(9000, 17000);
+  // Settle in and mostly STAY curled up — only shuffle if the sun drifts well
+  // away, so the cat clearly parks in the sunspot rather than chasing it.
+  const baskUntil = Date.now() + randRange(14000, 26000);
   const pose = baskAction(record.config);
+  playAction(record, pose);
   while (record.alive && !laserState.active && Date.now() < baskUntil) {
-    playAction(record, pose);
     if (Math.random() < EMOTE_CHANCE) showEmotion(record);
-    const signal = await waitInterruptible(randRange(2800, 5000), record, laserState);
+    const signal = await waitInterruptible(randRange(3200, 5500), record, laserState);
     if (signal !== "done") break;
-    // Drift after the moving sun, but lazily.
-    if (Math.abs(record.x - sunState.x) > 6 || Math.abs(record.y - sunState.y) > 6) {
+    if (Math.abs(record.x - sunState.x) > 11 || Math.abs(record.y - sunState.y) > 11) {
       playAction(record, pick(record.config.walkActions));
-      await moveAvoiding(record, sunState.x, sunState.y, zones, 2);
+      await moveAvoiding(record, sunState.x, sunState.y, zones, 2.2);
+      playAction(record, pose);
     }
   }
 }
@@ -358,6 +362,12 @@ async function runCatLife(record, getZones, laserState, activeCats, sunState, on
 
     if (Date.now() > deadline) break;
 
+    // Sun-seekers regularly make a beeline for the warm spot and curl up in it.
+    if (record.sunSeeker && Math.random() < 0.5) {
+      await baskInSun(record, sunState, laserState, getZones());
+      continue;
+    }
+
     // Sheeted breeds occasionally go play with their prop (e.g. the wheel).
     if (canInteract && Math.random() < 0.28) {
       await useInteraction(record, pick(record.config.interactions), getZones, laserState);
@@ -366,13 +376,9 @@ async function runCatLife(record, getZones, laserState, activeCats, sunState, on
 
     // Mostly stay put and idle again; occasionally wander somewhere new.
     if (Math.random() < RELOCATE_CHANCE * record.energy) {
-      if (record.sunSeeker && Math.random() < 0.5) {
-        await baskInSun(record, sunState, laserState, getZones());
-      } else {
-        const target = pickStopTarget(getZones(), activeCats, record);
-        playAction(record, pick(record.config.walkActions));
-        await moveAvoiding(record, target.x, target.y, getZones());
-      }
+      const target = pickStopTarget(getZones(), activeCats, record);
+      playAction(record, pick(record.config.walkActions));
+      await moveAvoiding(record, target.x, target.y, getZones());
     }
   }
 
@@ -553,8 +559,8 @@ export function initCritterScene(container, zoneSelectors = [".controls-square",
       reactionMult: randRange(0.8, 1.35),
       moveMult: randRange(0.85, 1.25),
       energy: COLOR_ENERGY[typeKey] || 1,
-      // About a third of cats are drawn to the sun.
-      sunSeeker: Math.random() < 0.35,
+      // Half of cats are drawn to the sun and will park in it.
+      sunSeeker: Math.random() < 0.5,
     };
     activeCats.push(record);
 
