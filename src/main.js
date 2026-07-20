@@ -459,16 +459,40 @@ function initQuickStyle(root) {
     const dot = DOT_STYLES[Math.floor(Math.random() * DOT_STYLES.length)][0];
     const corner = CORNER_STYLES[Math.floor(Math.random() * CORNER_STYLES.length)][0];
     const cornerDot = CORNER_DOT_STYLES[Math.floor(Math.random() * CORNER_DOT_STYLES.length)][0];
+    const errorLevel = ERROR_LEVELS[Math.floor(Math.random() * ERROR_LEVELS.length)][0];
+    const gradientOn = Math.random() < 0.5;
+    // Gradient end = a different preset's foreground, so the blend is always two
+    // on-palette colors rather than a random muddy hex.
+    let gradEnd = state.gradientColor;
+    for (let i = 0; i < 6 && gradEnd === state.gradientColor; i++) {
+      gradEnd = PRESETS[Math.floor(Math.random() * PRESETS.length)].fg;
+    }
+    if (gradEnd === preset.fg) gradEnd = state.gradientColor;
+    const gradType = Math.random() < 0.5 ? "linear" : "radial";
+
     state.fg = preset.fg;
     state.bg = preset.bg;
     state.dots = dot;
     state.corners = corner;
     state.cornerDots = cornerDot;
+    state.errorLevel = errorLevel;
+    state.gradient = gradientOn;
+    state.gradientColor = gradEnd;
+    state.gradientType = gradType;
+    // NOTE: state.logo / state.logoOriginal are deliberately left untouched — an
+    // uploaded logo survives every "Surprise me" (refresh() re-applies it, and
+    // bumps error-correction to H automatically when a logo is present).
+
     root.querySelector("#fg-color").value = preset.fg;
     root.querySelector("#bg-color").value = preset.bg;
     dotSelect.value = dot;
     cornerSelect.value = corner;
     cornerDotSelect.value = cornerDot;
+    errorSelect.value = errorLevel;
+    gradientToggle.checked = gradientOn;
+    gradientRow.style.display = gradientOn ? "grid" : "none";
+    root.querySelector("#gradient-color").value = gradEnd;
+    root.querySelector("#gradient-type").value = gradType;
     refresh();
   });
 

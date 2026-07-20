@@ -14,6 +14,8 @@ import orangeWheel from "./assets/critters/cat-orange-wheel.png";
 import greyTabbyWheel from "./assets/critters/cat-greytabby-wheel.png";
 import whiteActive from "./assets/critters/cat-white-active.png";
 import tsActive from "./assets/critters/cat-ts-active.png";
+import blackYarn from "./assets/critters/cat-black-yarn.png";
+import siameseYarn from "./assets/critters/cat-siamese-yarn.png";
 
 // 8-row sheets: turn, walk, standBack, walk2, sit, sit2, prowl, sleep.
 function catActions8() {
@@ -58,6 +60,9 @@ function newCat(sheet, speed) {
     actions: catActions8(),
     idleActions: ["sit", "sit2", "turn", "standBack"],
     walkActions: ["walk", "walk2", "prowl"],
+    // Head top / center within the cell (fraction), for placing emote bubbles
+    // just above the head instead of over the cat.
+    head: { topFrac: 0.355, centerFrac: 0.502 },
   };
 }
 
@@ -75,6 +80,7 @@ export const CRITTERS = {
     actions: catActions8(),
     idleActions: ["sit", "sit2", "turn", "standBack"],
     walkActions: ["walk", "walk2", "prowl"],
+    head: { topFrac: 0.3516, centerFrac: 0.5036 },
   },
   catBlack: {
     kind: "cat",
@@ -89,6 +95,7 @@ export const CRITTERS = {
     actions: catActions8(),
     idleActions: ["sit", "sit2", "turn", "standBack"],
     walkActions: ["walk", "walk2", "prowl"],
+    head: { topFrac: 0.3516, centerFrac: 0.5032 },
   },
   catCalico: {
     kind: "cat",
@@ -103,6 +110,7 @@ export const CRITTERS = {
     actions: catActions8(),
     idleActions: ["sit", "sit2", "turn", "standBack"],
     walkActions: ["walk", "walk2", "prowl"],
+    head: { topFrac: 0.4426, centerFrac: 0.4944 },
   },
   catCalicoTrue: {
     kind: "cat",
@@ -117,6 +125,7 @@ export const CRITTERS = {
     actions: catActions6(),
     idleActions: ["sit", "sit2", "turn", "standBack"],
     walkActions: ["walk", "walk2"],
+    head: { topFrac: 0.1222, centerFrac: 0.5032 },
   },
   catGreyTabby: newCat(catGreyTabby, 53),
   catOrange: newCat(catOrange, 56),
@@ -132,6 +141,8 @@ CRITTERS.catOrange.interactions = ["wheel"];
 CRITTERS.catGreyTabby.interactions = ["wheel"];
 CRITTERS.catWhite.interactions = ["post", "tunnel"];
 CRITTERS.catTortoiseshell.interactions = ["post", "tunnel"];
+CRITTERS.catBlack.interactions = ["yarn"];
+CRITTERS.catSiamese.interactions = ["yarn"];
 
 export const CAT_TYPES = [
   "catWhite",
@@ -182,6 +193,11 @@ export const EMOTION_SPRITES = [
 // planted. `scale` sizes the whole vignette; phases play getOn → run(loop) →
 // slowDown → getOff. Coords mapped from the labeled sprite sheets.
 export const INTERACTIONS = {
+  // Treadmill wheel — run-only loop that fades in/out (like the post/tunnel/yarn
+  // vignettes). Frames are UNIFORM grid cells (the wheel sits at the same spot in
+  // every cell), so bottom-center anchoring keeps the wheel planted instead of
+  // scrolling sideways as the cat's pose changes. The cat's own walk in/out is
+  // the approach; the climb-on / dismount frames are intentionally dropped.
   wheel: {
     catOrange: {
       sheet: orangeWheel,
@@ -189,10 +205,10 @@ export const INTERACTIONS = {
       sheetH: 1488,
       scale: 0.57,
       fps: 7,
-      getOn: [[13, 416, 169, 133], [178, 416, 179, 134], [392, 413, 138, 134], [564, 413, 138, 134], [25, 585, 136, 133], [204, 584, 139, 134]],
-      run: [[27, 778, 129, 131], [206, 778, 130, 131], [386, 778, 130, 131], [566, 778, 130, 131], [27, 953, 129, 131], [206, 953, 130, 131], [386, 953, 130, 131], [566, 953, 130, 133]],
-      slowDown: [[34, 1177, 113, 90], [215, 1183, 113, 84], [399, 1187, 106, 78], [569, 1136, 125, 131]],
-      getOff: [[27, 1318, 155, 128], [178, 1318, 184, 127], [358, 1318, 184, 127], [538, 1361, 155, 84]],
+      getOn: [],
+      run: [[0, 779, 180, 128], [180, 779, 180, 128], [360, 779, 180, 128], [540, 779, 180, 128], [0, 954, 180, 128], [180, 954, 180, 128], [360, 954, 180, 128], [540, 954, 180, 128]],
+      slowDown: [],
+      getOff: [],
     },
     catGreyTabby: {
       sheet: greyTabbyWheel,
@@ -200,10 +216,37 @@ export const INTERACTIONS = {
       sheetH: 2976,
       scale: 0.285,
       fps: 7,
-      getOn: [[31, 833, 329, 261], [360, 837, 350, 257], [789, 830, 265, 256], [1132, 830, 266, 256], [54, 1174, 263, 256], [414, 1174, 264, 256]],
-      run: [[58, 1559, 250, 254], [417, 1560, 251, 253], [778, 1560, 250, 254], [1137, 1560, 250, 253], [58, 1910, 250, 254], [417, 1910, 251, 254], [778, 1911, 250, 253], [1137, 1911, 249, 253]],
-      slowDown: [[72, 2370, 218, 156], [477, 2356, 139, 170], [803, 2374, 201, 152], [1142, 2277, 242, 249]],
-      getOff: [[58, 2640, 240, 246], [339, 2640, 238, 246], [617, 2640, 246, 246], [931, 2677, 189, 209], [1152, 2688, 229, 198]],
+      getOn: [],
+      run: [[0, 1557, 360, 256], [360, 1557, 360, 256], [720, 1557, 360, 256], [1080, 1557, 360, 256], [0, 1907, 360, 256], [360, 1907, 360, 256], [720, 1907, 360, 256], [1080, 1907, 360, 256]],
+      slowDown: [],
+      getOff: [],
+    },
+  },
+
+  // Yarn play — black + siamese cats bat, hug, and roll a ball of yarn. Loop-only
+  // (fades in/out); frames are uniform grid cells so the cat/yarn stays planted.
+  yarn: {
+    catBlack: {
+      sheet: blackYarn,
+      sheetW: 495,
+      sheetH: 1024,
+      scale: 0.55,
+      fps: 5,
+      getOn: [],
+      run: [[0, 512, 124, 128], [0, 384, 124, 128], [124, 384, 124, 128], [248, 640, 124, 128], [124, 512, 124, 128], [248, 512, 124, 128], [371, 512, 124, 128], [248, 384, 124, 128]],
+      slowDown: [],
+      getOff: [],
+    },
+    catSiamese: {
+      sheet: siameseYarn,
+      sheetW: 1440,
+      sheetH: 2976,
+      scale: 0.195,
+      fps: 5,
+      getOn: [],
+      run: [[0, 1488, 360, 372], [0, 1116, 360, 372], [360, 1116, 360, 372], [720, 1860, 360, 372], [360, 1488, 360, 372], [720, 1488, 360, 372], [1080, 1488, 360, 372], [720, 1116, 360, 372]],
+      slowDown: [],
+      getOff: [],
     },
   },
 

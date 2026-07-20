@@ -134,6 +134,17 @@ function showEmotion(record) {
   const displayW = sprite.w * scale;
   const facingRight = record.facing === "right";
 
+  // Place the bubble just ABOVE the cat's head (measured per breed) so it never
+  // covers the cat. The wrapper is the sprite box; head top/center are fractions
+  // of it. A small nudge toward the facing side reads as the cat "speaking".
+  const head = record.config.head || { topFrac: 0.32, centerFrac: 0.5 };
+  const catW = record.config.cellW * record.scale; // == sprite display width
+  const catH = record.config.displayH * record.sizeMult; // == sprite display height
+  const headTopPx = head.topFrac * catH;
+  const headCenterPx = head.centerFrac * catW;
+  const gap = 5 * record.sizeMult;
+  const sideNudge = (facingRight ? 1 : -1) * catW * 0.16;
+
   const bubble = document.createElement("div");
   bubble.className = "critter-emotion";
   bubble.style.width = `${displayW}px`;
@@ -142,15 +153,15 @@ function showEmotion(record) {
   bubble.style.backgroundRepeat = "no-repeat";
   bubble.style.backgroundSize = `${sprite.sheetW * scale}px ${sprite.sheetH * scale}px`;
   bubble.style.backgroundPosition = `-${sprite.x * scale}px -${sprite.y * scale}px`;
-  // Bubble sits toward the side the cat faces, flipped so its tail points back
-  // at the cat — reads as the cat "speaking" in that direction.
-  bubble.style.left = facingRight ? "72%" : "28%";
+  bubble.style.left = `${headCenterPx + sideNudge}px`;
+  // Bubble's bottom rests `gap` px above the head top; it grows upward.
+  bubble.style.top = `${headTopPx - gap - displayH}px`;
   const flip = facingRight ? -1 : 1;
-  bubble.style.transform = `translate(-50%, 4px) scaleX(${flip})`;
+  bubble.style.transform = `translate(-50%, 6px) scaleX(${flip})`;
   record.wrapper.appendChild(bubble);
   void bubble.offsetWidth;
   bubble.style.opacity = "1";
-  bubble.style.transform = `translate(-50%, -10px) scaleX(${flip})`;
+  bubble.style.transform = `translate(-50%, 0) scaleX(${flip})`;
   setTimeout(() => {
     bubble.style.opacity = "0";
     setTimeout(() => bubble.remove(), 300);
@@ -188,18 +199,26 @@ function computeZones(container, selectors) {
 // A valid *stop* point: inside the edge buffer, not under a white box, and not
 // crowding another cat.
 function pickStopTarget(zones, activeCats, self) {
-  let fallback = null;
-  for (let attempt = 0; attempt < 16; attempt++) {
+  let best = null;
+  let bestCrowd = Infinity;
+  for (let attempt = 0; attempt < 24; attempt++) {
     const x = randRange(EDGE_X, 100 - EDGE_X);
     const y = randRange(EDGE_Y, 100 - EDGE_Y);
     if (inZone(x, y, zones)) continue;
-    fallback = { x, y };
-    const crowded = activeCats.some(
-      (o) => o !== self && o.alive && Math.abs(o.x - x) < 7 && Math.abs(o.y - y) < 7
+    // Count how many other cats already sit within a cat's-width of here.
+    const crowd = activeCats.reduce(
+      (n, o) => n + (o !== self && o.alive && Math.abs(o.x - x) < 8 && Math.abs(o.y - y) < 8 ? 1 : 0),
+      0
     );
-    if (!crowded) return { x, y };
+    if (crowd === 0) return { x, y };
+    // Keep the emptiest spot we've seen as the fallback — never a fixed corner
+    // (that's what made cats pile up when the stage got busy).
+    if (crowd < bestCrowd) {
+      bestCrowd = crowd;
+      best = { x, y };
+    }
   }
-  return fallback || { x: EDGE_X + 4, y: 100 - EDGE_Y - 4 };
+  return best || { x: randRange(EDGE_X, 100 - EDGE_X), y: 100 - EDGE_Y - 4 };
 }
 
 function segmentCrossesZones(x0, y0, x1, y1, zones) {
@@ -220,6 +239,38 @@ function pickClearPoint(zones) {
     if (!inZone(x, y, zones)) return { x, y };
   }
   return { x: EDGE_X + 3, y: 100 - EDGE_Y - 3 };
+}
+
+// --- Obstacle boxes: keep toys, the cat tree, and prop vignettes from ever
+// spawning on top of each other. Every box is a %-of-stage rect {l,t,r,b};
+// props anchor top-left, vignettes anchor bottom-center. ---
+function rectsOverlap(a, b, gap = 1.5) {
+  return !(a.r + gap < b.l || b.r + gap < a.l || a.b + gap < b.t || b.b + gap < a.t);
+}
+
+function propRect(container, prop, x, y) {
+  const scale = prop.displayH / prop.h;
+  const cr = container.getBoundingClientRect();
+  const wpct = cr.width ? ((prop.w * scale) / cr.width) * 100 : 8;
+  const hpct = cr.height ? ((prop.h * scale) / cr.height) * 100 : 8;
+  return { l: x, t: y, r: x + wpct, b: y + hpct };
+}
+
+function vignetteRect(container, def, gx, gy) {
+  const maxW = Math.max(...def.run.map((f) => f[2]));
+  const maxH = Math.max(...def.run.map((f) => f[3]));
+  const cr = container.getBoundingClientRect();
+  const wpct = cr.width ? ((maxW * def.scale) / cr.width) * 100 : 10;
+  const hpct = cr.height ? ((maxH * def.scale) / cr.height) * 100 : 10;
+  return { l: gx - wpct / 2, t: gy - hpct, r: gx + wpct / 2, b: gy };
+}
+
+// All live obstacle rects: persistent props + any vignette currently playing.
+function obstacleRects(propList, vignetteList) {
+  const out = [];
+  for (const p of propList) if (p.rect) out.push(p.rect);
+  for (const v of vignetteList) out.push(v);
+  return out;
 }
 
 function corridorY(zones) {
@@ -274,8 +325,13 @@ function baskAction(config) {
 // A sun-seeker ambles into the sunspot, curls up, and slowly follows the light
 // as it drifts around the boxes.
 async function baskInSun(record, sunState, laserState, zones) {
+  // Each cat parks at its OWN spot within the warm pool, so several sun-seekers
+  // fan out across the sunspot instead of stacking on the exact same pixel.
+  const off = record.sunOffset;
+  const sx = () => Math.max(EDGE_X, Math.min(100 - EDGE_X, sunState.x + off.dx));
+  const sy = () => Math.max(EDGE_Y, Math.min(100 - EDGE_Y, sunState.y + off.dy));
   playAction(record, pick(record.config.walkActions));
-  await moveAvoiding(record, sunState.x, sunState.y, zones, 1.7);
+  await moveAvoiding(record, sx(), sy(), zones, 1.7);
 
   // Settle in and mostly STAY curled up — only shuffle if the sun drifts well
   // away, so the cat clearly parks in the sunspot rather than chasing it.
@@ -286,9 +342,9 @@ async function baskInSun(record, sunState, laserState, zones) {
     if (Math.random() < EMOTE_CHANCE) showEmotion(record);
     const signal = await waitInterruptible(randRange(3200, 5500), record, laserState);
     if (signal !== "done") break;
-    if (Math.abs(record.x - sunState.x) > 11 || Math.abs(record.y - sunState.y) > 11) {
+    if (Math.abs(record.x - sx()) > 11 || Math.abs(record.y - sy()) > 11) {
       playAction(record, pick(record.config.walkActions));
-      await moveAvoiding(record, sunState.x, sunState.y, zones, 2.2);
+      await moveAvoiding(record, sx(), sy(), zones, 2.2);
       playAction(record, pose);
     }
   }
@@ -352,27 +408,44 @@ async function playVignette(container, def, gxPct, gyPct, record, laserState) {
 
 // A sheeted cat ambles to a clear spot, hides its roaming sprite, and plays a
 // prop vignette (e.g. running on the treadmill wheel) in its place.
-async function useInteraction(record, kind, getZones, laserState) {
+async function useInteraction(record, kind, getZones, laserState, propList, vignetteList) {
   const def = INTERACTIONS[kind] && INTERACTIONS[kind][record.typeKey];
   if (!def) return;
   const zones = getZones();
+  const container = record.wrapper.parentElement;
+  const obstacles = obstacleRects(propList, vignetteList);
   let gx = record.x;
   let gy = Math.min(100 - EDGE_Y, Math.max(EDGE_Y + 10, record.y));
-  for (let i = 0; i < 12; i++) {
+  // Find a spot that's clear of the menus AND of any toy/tree/other vignette.
+  for (let i = 0; i < 16; i++) {
     const cx = randRange(EDGE_X + 6, 100 - EDGE_X - 6);
     const cy = randRange(EDGE_Y + 12, 100 - EDGE_Y);
-    if (!inZone(cx, cy, zones)) { gx = cx; gy = cy; break; }
+    if (inZone(cx, cy, zones)) continue;
+    const r = vignetteRect(container, def, cx, cy);
+    if (obstacles.some((o) => rectsOverlap(o, r))) continue;
+    gx = cx;
+    gy = cy;
+    break;
   }
   playAction(record, pick(record.config.walkActions));
   await moveAvoiding(record, gx, gy, zones);
   if (!record.alive) return;
+  // Reserve the footprint so nothing else lands on the wheel/post/tunnel while
+  // it plays; release it when the vignette ends (even if interrupted).
+  const rect = vignetteRect(container, def, gx, gy);
+  vignetteList.push(rect);
   record.wrapper.style.visibility = "hidden";
   stopFrames(record);
-  await playVignette(record.wrapper.parentElement, def, gx, gy, record, laserState);
-  record.wrapper.style.visibility = "";
+  try {
+    await playVignette(container, def, gx, gy, record, laserState);
+  } finally {
+    const idx = vignetteList.indexOf(rect);
+    if (idx !== -1) vignetteList.splice(idx, 1);
+    record.wrapper.style.visibility = "";
+  }
 }
 
-async function runCatLife(record, getZones, laserState, activeCats, sunState, propList, onExit) {
+async function runCatLife(record, getZones, laserState, activeCats, sunState, propList, vignetteList, onExit) {
   const deadline = Date.now() + randRange(LIFESPAN_MIN, LIFESPAN_MAX);
   const canInteract = record.config.interactions && record.config.interactions.length;
 
@@ -408,7 +481,7 @@ async function runCatLife(record, getZones, laserState, activeCats, sunState, pr
 
     // Sheeted breeds occasionally go play with their prop (e.g. the wheel).
     if (canInteract && Math.random() < 0.28) {
-      await useInteraction(record, pick(record.config.interactions), getZones, laserState);
+      await useInteraction(record, pick(record.config.interactions), getZones, laserState, propList, vignetteList);
       continue;
     }
 
@@ -508,19 +581,29 @@ function runSun(container, sunState) {
 
 // Toys/bowls/tree spawn, hang around a while so cats can visit, then fade out.
 // `propList` is the live list cats read to seek things out.
-function runPropEvents(container, getZones, propList) {
+function runPropEvents(container, getZones, propList, vignetteList) {
   const MAX_PROPS = 3;
 
   function spawnProp() {
     const prop = pick(PROPS);
     const scale = prop.displayH / prop.h;
     const zones = getZones();
-    let x, y;
-    for (let i = 0; i < 14; i++) {
+    const obstacles = obstacleRects(propList, vignetteList);
+    // Find a spot clear of the menus, on-stage, and not overlapping any other
+    // toy/tree/vignette. If nothing's free this round, skip — try again later.
+    let x, y, rect, placed = false;
+    for (let i = 0; i < 22; i++) {
       x = randRange(EDGE_X + 3, 100 - EDGE_X - 5);
       y = randRange(EDGE_Y + 8, 100 - EDGE_Y - 6);
-      if (!inZone(x, y, zones)) break;
+      if (inZone(x, y, zones)) continue;
+      rect = propRect(container, prop, x, y);
+      if (rect.r > 100 - EDGE_X || rect.b > 100 - EDGE_Y) continue;
+      if (obstacles.some((o) => rectsOverlap(o, rect))) continue;
+      placed = true;
+      break;
     }
+    if (!placed) return;
+
     const el = document.createElement("div");
     el.className = "critter-prop";
     el.style.left = `${x}%`;
@@ -534,7 +617,7 @@ function runPropEvents(container, getZones, propList) {
     el.style.transform = "scale(0.6)";
     el.style.transition = "opacity 0.4s ease, transform 0.4s ease";
     container.appendChild(el);
-    const entry = { el, x, y, kind: prop.kind };
+    const entry = { el, x, y, kind: prop.kind, rect };
     propList.push(entry);
 
     void el.offsetWidth;
@@ -586,10 +669,11 @@ export function initCritterScene(container, zoneSelectors = [".controls-square",
   const sunState = { x: 5, y: 50 };
   const activeCats = [];
   const propList = [];
+  const vignetteList = []; // footprints of prop vignettes currently playing
   const getZones = () => computeZones(container, zoneSelectors);
 
   runSun(container, sunState);
-  runPropEvents(container, getZones, propList);
+  runPropEvents(container, getZones, propList, vignetteList);
 
   function spawnCat(forcedType) {
     const typeKey = forcedType || pick(CAT_TYPES);
@@ -627,10 +711,12 @@ export function initCritterScene(container, zoneSelectors = [".controls-square",
       energy: COLOR_ENERGY[typeKey] || 1,
       // Half of cats are drawn to the sun and will park in it.
       sunSeeker: Math.random() < 0.5,
+      // Personal parking offset within the sunspot so baskers fan out.
+      sunOffset: { dx: randRange(-7, 7), dy: randRange(-5, 4) },
     };
     activeCats.push(record);
 
-    runCatLife(record, getZones, laserState, activeCats, sunState, propList, (finished) => {
+    runCatLife(record, getZones, laserState, activeCats, sunState, propList, vignetteList, (finished) => {
       const idx = activeCats.indexOf(finished);
       if (idx !== -1) activeCats.splice(idx, 1);
       // Each despawn breeds a replacement 6s later — steady turnover.
