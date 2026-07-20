@@ -3,14 +3,17 @@ import { CRITTERS, CAT_TYPES, PROPS, EMOTION_SPRITES, INTERACTIONS } from "./cri
 // Global frame-rate damper — cats were spazzing; everything animates calmer.
 const CALM = 0.55;
 const TARGET_POPULATION = 8; // 25% fewer than the old 10
-const RESPAWN_DELAY = 6000; // spawn 6s after a despawn
-const LIFESPAN_MIN = 20000;
-const LIFESPAN_MAX = 45000;
+// Respawn after a random delay (not a fixed beat) so cats don't reappear in
+// waves. Lifespans are wide and per-cat for the same reason.
+const RESPAWN_MIN = 2500;
+const RESPAWN_MAX = 12000;
+const LIFESPAN_MIN = 18000;
+const LIFESPAN_MAX = 52000;
 const EDGE_X = 3.5; // % clear buffer from left/right screen edges before a cat stops
 const EDGE_Y = 5; // % clear buffer from top/bottom screen edges
 const ZONE_PAD = 1.2; // % padding around the white boxes for stop-target rejection
-const EMOTE_CHANCE = 0.55; // lots of little chirps
-const RELOCATE_CHANCE = 0.32; // lower → more cats idling at any moment
+// NOTE: emote / relocate / sun / interact odds are now PER CAT (rolled in
+// spawnCat), so the corral never acts in lock-step.
 
 // Per-color "activity" — some breeds are lazy, some hyper. Modulates idle
 // dwell time, relocate frequency, and travel speed.
@@ -371,7 +374,7 @@ async function baskInSun(record, sunState, laserState, zones, activeCats) {
   const pose = baskAction(record.config);
   playAction(record, pose);
   while (record.alive && !laserState.active && Date.now() < baskUntil) {
-    if (Math.random() < EMOTE_CHANCE) showEmotion(record);
+    if (Math.random() < record.emoteChance) showEmotion(record);
     const signal = await waitInterruptible(randRange(3200, 5500), record, laserState);
     if (signal !== "done") break;
     if (Math.hypot(sunState.x - target.x, sunState.y - target.y) > 14) {
@@ -480,12 +483,15 @@ async function useInteraction(record, kind, getZones, laserState, propList, vign
 
 async function runCatLife(record, getZones, laserState, activeCats, sunState, propList, vignetteList, onExit) {
   const deadline = Date.now() + randRange(LIFESPAN_MIN, LIFESPAN_MAX);
-  const canInteract = record.config.interactions && record.config.interactions.length;
+  const canInteract = record.interactChance > 0;
 
-  // Walk in from off-screen to a first resting spot.
+  // Walk in from off-screen to a first resting spot. A random head-start before
+  // the loop begins puts each cat's action cycle out of phase with the others.
   const first = pickStopTarget(getZones(), activeCats, record);
   playAction(record, pick(record.config.walkActions));
   await moveAvoiding(record, first.x, first.y, getZones());
+  playAction(record, pick(record.config.idleActions));
+  await waitInterruptible(randRange(0, 4500), record, laserState);
 
   while (record.alive) {
     if (laserState.active) {
@@ -493,39 +499,42 @@ async function runCatLife(record, getZones, laserState, activeCats, sunState, pr
       continue;
     }
 
-    // Idle a good while — most cats should be sitting around, not marching.
+    // Idle a good while — most cats should be sitting around, not marching. Sit
+    // length is this cat's own baseline + spread, so no two share a beat.
     playAction(record, pick(record.config.idleActions));
-    if (Math.random() < EMOTE_CHANCE) showEmotion(record);
-    const dwell = (randRange(4500, 9000) * record.reactionMult) / record.energy;
+    if (Math.random() < record.emoteChance) showEmotion(record);
+    const dwell = ((record.dwellBase + Math.random() * record.dwellVar) * record.reactionMult) / record.energy;
     const signal = await waitInterruptible(dwell, record, laserState);
     if (signal === "dead") break;
     if (signal === "laser") continue;
 
     // A second chirp partway through a long sit is common.
-    if (Math.random() < EMOTE_CHANCE * 0.7) showEmotion(record);
+    if (Math.random() < record.emoteChance * 0.7) showEmotion(record);
 
     if (Date.now() > deadline) break;
 
-    // Sun-seekers regularly make a beeline for the warm spot and curl up in it.
-    if (record.sunSeeker && Math.random() < 0.5) {
-      await baskInSun(record, sunState, laserState, getZones(), activeCats);
-      continue;
-    }
-
-    // Sheeted breeds occasionally go play with their prop (e.g. the wheel).
-    if (canInteract && Math.random() < 0.28) {
+    // Signature toy FIRST and OFTEN — a cat that owns a wheel/post/tunnel/yarn
+    // reaches for it much more than it does anything else, so it's clearly
+    // "their thing".
+    if (canInteract && Math.random() < record.interactChance) {
       await useInteraction(record, pick(record.config.interactions), getZones, laserState, propList, vignetteList);
       continue;
     }
 
+    // Sun-lovers make a beeline for the warm spot and curl up in it.
+    if (record.sunLove && Math.random() < record.sunLove) {
+      await baskInSun(record, sunState, laserState, getZones(), activeCats);
+      continue;
+    }
+
     // Wander over to a bowl / cat tree that's out and hang around it.
-    if (propList.length && Math.random() < 0.4) {
+    if (propList.length && Math.random() < record.propChance) {
       await visitProp(record, propList, getZones, laserState, activeCats);
       continue;
     }
 
     // Mostly stay put and idle again; occasionally wander somewhere new.
-    if (Math.random() < RELOCATE_CHANCE * record.energy) {
+    if (Math.random() < record.relocateChance * record.energy) {
       const target = pickStopTarget(getZones(), activeCats, record);
       playAction(record, pick(record.config.walkActions));
       await moveAvoiding(record, target.x, target.y, getZones());
@@ -692,7 +701,7 @@ async function visitProp(record, propList, getZones, laserState, activeCats) {
   const until = Date.now() + randRange(5000, 11000);
   while (record.alive && !laserState.active && Date.now() < until) {
     playAction(record, pick(record.config.idleActions));
-    if (Math.random() < EMOTE_CHANCE) showEmotion(record);
+    if (Math.random() < record.emoteChance) showEmotion(record);
     const s = await waitInterruptible(randRange(2600, 4600), record, laserState);
     if (s !== "done") break;
   }
@@ -726,6 +735,7 @@ export function initCritterScene(container, zoneSelectors = [".controls-square",
 
     container.appendChild(wrapper);
 
+    const canInteract = !!(config.interactions && config.interactions.length);
     const record = {
       wrapper,
       spriteEl,
@@ -743,22 +753,36 @@ export function initCritterScene(container, zoneSelectors = [".controls-square",
       reactionMult: randRange(0.8, 1.35),
       moveMult: randRange(0.85, 1.25),
       energy: COLOR_ENERGY[typeKey] || 1,
-      // Half of cats are drawn to the sun and will park in it.
-      sunSeeker: Math.random() < 0.5,
+      // Per-cat behaviour odds — rolled wide so no two cats share a rhythm and
+      // the corral never acts on one shared timer.
+      emoteChance: randRange(0.28, 0.72),
+      relocateChance: randRange(0.14, 0.48),
+      propChance: randRange(0.22, 0.52),
+      // Roughly half are sun-lovers; those that are get their own pull strength.
+      sunLove: Math.random() < 0.5 ? randRange(0.4, 0.8) : 0,
+      // Cats with a signature toy (wheel / post+tunnel / yarn) reach for it a
+      // LOT — it's their thing — so it shows up often for them specifically.
+      interactChance: canInteract ? randRange(0.5, 0.82) : 0,
+      // This cat's own baseline sit length + spread.
+      dwellBase: randRange(3000, 7200),
+      dwellVar: randRange(1500, 5500),
     };
     activeCats.push(record);
 
     runCatLife(record, getZones, laserState, activeCats, sunState, propList, vignetteList, (finished) => {
       const idx = activeCats.indexOf(finished);
       if (idx !== -1) activeCats.splice(idx, 1);
-      // Each despawn breeds a replacement 6s later — steady turnover.
-      setTimeout(() => spawnCat(), RESPAWN_DELAY);
+      // Replace after a RANDOM delay so replacements don't arrive in a wave.
+      setTimeout(() => spawnCat(), randRange(RESPAWN_MIN, RESPAWN_MAX));
     });
   }
 
-  // Seed the initial population, staggered so they don't all pop in together.
+  // Seed the initial population, staggered with jitter (not a clean grid) so
+  // they don't march in on one beat.
+  let seedDelay = randRange(0, 600);
   for (let i = 0; i < TARGET_POPULATION; i++) {
-    setTimeout(() => spawnCat(), i * 700);
+    setTimeout(() => spawnCat(), seedDelay);
+    seedDelay += randRange(500, 1900);
   }
 
   // Watchdog: if population ever drifts below target, top it back up gently.
