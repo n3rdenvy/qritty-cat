@@ -221,6 +221,30 @@ function pickStopTarget(zones, activeCats, self) {
   return best || { x: randRange(EDGE_X, 100 - EDGE_X), y: 100 - EDGE_Y - 4 };
 }
 
+// Nudge a desired settle point off any spot already taken by another cat (or a
+// box), spiralling outward until a clear slot is found. This is what keeps cats
+// from piling onto the same pixel at an attractor (the sun, a bowl, the laser).
+function avoidCats(x, y, record, activeCats, zones, minGap = 7) {
+  const clampX = (v) => Math.max(EDGE_X, Math.min(100 - EDGE_X, v));
+  const clampY = (v) => Math.max(EDGE_Y, Math.min(100 - EDGE_Y, v));
+  const cx = clampX(x);
+  const cy = clampY(y);
+  const taken = (px, py) =>
+    activeCats.some((o) => o !== record && o.alive && Math.hypot(o.x - px, o.y - py) < minGap);
+  if (!taken(cx, cy) && !inZone(cx, cy, zones)) return { x: cx, y: cy };
+  for (let ring = 1; ring <= 4; ring++) {
+    const r = minGap * ring * 0.9;
+    const start = Math.random() * Math.PI * 2;
+    for (let k = 0; k < 8; k++) {
+      const a = start + (k / 8) * Math.PI * 2;
+      const px = clampX(cx + Math.cos(a) * r);
+      const py = clampY(cy + Math.sin(a) * r);
+      if (!taken(px, py) && !inZone(px, py, zones)) return { x: px, y: py };
+    }
+  }
+  return { x: cx, y: cy };
+}
+
 function segmentCrossesZones(x0, y0, x1, y1, zones) {
   if (!zones.length) return false;
   const N = 24;
@@ -294,18 +318,28 @@ async function moveAvoiding(record, toX, toY, zones, speedMult = 1) {
   }
 }
 
-async function chaseLaser(record, laserState, getZones) {
+async function chaseLaser(record, laserState, getZones, activeCats) {
   playAction(record, pick(record.config.walkActions));
+  // Each cat takes an evenly-spaced slot in a ring around the dot (by its index
+  // in the pack), with avoidCats as a safety net, so the cats SURROUND the laser
+  // instead of stacking on the exact pixel — the funny fast pounce, no pile-up.
+  const n = Math.max(1, activeCats.length);
+  const idx = Math.max(0, activeCats.indexOf(record));
+  const ang = (idx / n) * Math.PI * 2 + randRange(-0.25, 0.25);
+  const rad = randRange(7, 12);
   while (laserState.active && record.alive) {
     const zones = getZones();
-    let tx = Math.max(EDGE_X, Math.min(100 - EDGE_X, laserState.x + randRange(-3, 3)));
-    let ty = Math.max(EDGE_Y, Math.min(100 - EDGE_Y, laserState.y + randRange(-2, 2)));
+    let { x: tx, y: ty } = avoidCats(
+      laserState.x + Math.cos(ang) * rad,
+      laserState.y + Math.sin(ang) * rad,
+      record, activeCats, zones, 6
+    );
     if (inZone(tx, ty, zones)) {
       tx = laserState.x;
       ty = corridorY(zones);
     }
-    // Fly straight at the dot (fast fixed pounce = funny); only detour around a
-    // box when the direct path would actually cut under a menu.
+    // Fast fixed pounce toward the ring spot; detour only if the direct path
+    // would cut under a menu.
     if (segmentCrossesZones(record.x, record.y, tx, ty, zones)) {
       await moveAvoiding(record, tx, ty, zones, 0.6);
     } else {
@@ -324,17 +358,15 @@ function baskAction(config) {
 
 // A sun-seeker ambles into the sunspot, curls up, and slowly follows the light
 // as it drifts around the boxes.
-async function baskInSun(record, sunState, laserState, zones) {
-  // Each cat parks at its OWN spot within the warm pool, so several sun-seekers
-  // fan out across the sunspot instead of stacking on the exact same pixel.
-  const off = record.sunOffset;
-  const sx = () => Math.max(EDGE_X, Math.min(100 - EDGE_X, sunState.x + off.dx));
-  const sy = () => Math.max(EDGE_Y, Math.min(100 - EDGE_Y, sunState.y + off.dy));
+async function baskInSun(record, sunState, laserState, zones, activeCats) {
+  // Park at a clear spot within the warm pool — avoidCats fans the sun-seekers
+  // out around the sunspot instead of stacking them on the exact same pixel.
+  let target = avoidCats(sunState.x, sunState.y, record, activeCats, zones, 7);
   playAction(record, pick(record.config.walkActions));
-  await moveAvoiding(record, sx(), sy(), zones, 1.7);
+  await moveAvoiding(record, target.x, target.y, zones, 1.7);
 
   // Settle in and mostly STAY curled up — only shuffle if the sun drifts well
-  // away, so the cat clearly parks in the sunspot rather than chasing it.
+  // away from where this cat parked, so it clearly parks rather than chasing it.
   const baskUntil = Date.now() + randRange(14000, 26000);
   const pose = baskAction(record.config);
   playAction(record, pose);
@@ -342,9 +374,10 @@ async function baskInSun(record, sunState, laserState, zones) {
     if (Math.random() < EMOTE_CHANCE) showEmotion(record);
     const signal = await waitInterruptible(randRange(3200, 5500), record, laserState);
     if (signal !== "done") break;
-    if (Math.abs(record.x - sx()) > 11 || Math.abs(record.y - sy()) > 11) {
+    if (Math.hypot(sunState.x - target.x, sunState.y - target.y) > 14) {
+      target = avoidCats(sunState.x, sunState.y, record, activeCats, zones, 7);
       playAction(record, pick(record.config.walkActions));
-      await moveAvoiding(record, sx(), sy(), zones, 2.2);
+      await moveAvoiding(record, target.x, target.y, zones, 2.2);
       playAction(record, pose);
     }
   }
@@ -456,7 +489,7 @@ async function runCatLife(record, getZones, laserState, activeCats, sunState, pr
 
   while (record.alive) {
     if (laserState.active) {
-      await chaseLaser(record, laserState, getZones);
+      await chaseLaser(record, laserState, getZones, activeCats);
       continue;
     }
 
@@ -475,7 +508,7 @@ async function runCatLife(record, getZones, laserState, activeCats, sunState, pr
 
     // Sun-seekers regularly make a beeline for the warm spot and curl up in it.
     if (record.sunSeeker && Math.random() < 0.5) {
-      await baskInSun(record, sunState, laserState, getZones());
+      await baskInSun(record, sunState, laserState, getZones(), activeCats);
       continue;
     }
 
@@ -487,7 +520,7 @@ async function runCatLife(record, getZones, laserState, activeCats, sunState, pr
 
     // Wander over to a bowl / cat tree that's out and hang around it.
     if (propList.length && Math.random() < 0.4) {
-      await visitProp(record, propList, getZones, laserState);
+      await visitProp(record, propList, getZones, laserState, activeCats);
       continue;
     }
 
@@ -644,13 +677,14 @@ function runPropEvents(container, getZones, propList, vignetteList) {
 }
 
 // A cat wanders over to a bowl/tree, settles beside it, and hangs out.
-async function visitProp(record, propList, getZones, laserState) {
+async function visitProp(record, propList, getZones, laserState, activeCats) {
   const props = propList.filter((p) => p.el.isConnected);
   if (!props.length) return;
   const prop = pick(props);
   const zones = getZones();
-  const tx = Math.max(EDGE_X, Math.min(100 - EDGE_X, prop.x + (Math.random() < 0.5 ? -3.5 : 3.5)));
-  const ty = Math.max(EDGE_Y, Math.min(100 - EDGE_Y, prop.y + randRange(-1, 2)));
+  // Hang out beside the prop, but on a spot no other cat is already using.
+  const side = Math.random() < 0.5 ? -4 : 4;
+  const { x: tx, y: ty } = avoidCats(prop.x + side, prop.y + randRange(0, 2.5), record, activeCats, zones, 6);
   if (inZone(tx, ty, zones)) return;
   playAction(record, pick(record.config.walkActions));
   await moveAvoiding(record, tx, ty, zones);
@@ -711,8 +745,6 @@ export function initCritterScene(container, zoneSelectors = [".controls-square",
       energy: COLOR_ENERGY[typeKey] || 1,
       // Half of cats are drawn to the sun and will park in it.
       sunSeeker: Math.random() < 0.5,
-      // Personal parking offset within the sunspot so baskers fan out.
-      sunOffset: { dx: randRange(-7, 7), dy: randRange(-5, 4) },
     };
     activeCats.push(record);
 
