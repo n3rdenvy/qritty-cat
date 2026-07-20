@@ -249,12 +249,17 @@ async function chaseLaser(record, laserState, getZones) {
     const zones = getZones();
     let tx = Math.max(EDGE_X, Math.min(100 - EDGE_X, laserState.x + randRange(-3, 3)));
     let ty = Math.max(EDGE_Y, Math.min(100 - EDGE_Y, laserState.y + randRange(-2, 2)));
-    // Don't dive under the boxes chasing the dot — nudge the pounce point clear.
     if (inZone(tx, ty, zones)) {
       tx = laserState.x;
       ty = corridorY(zones);
     }
-    await moveAvoiding(record, tx, ty, zones, randRange(0.9, 1.3));
+    // Fly straight at the dot (fast fixed pounce = funny); only detour around a
+    // box when the direct path would actually cut under a menu.
+    if (segmentCrossesZones(record.x, record.y, tx, ty, zones)) {
+      await moveAvoiding(record, tx, ty, zones, 0.6);
+    } else {
+      await moveTo(record, tx, ty, randRange(0.5, 0.9));
+    }
   }
 }
 
@@ -314,16 +319,33 @@ async function playVignette(container, def, gxPct, gyPct, record, laserState) {
     frameEl.style.backgroundPosition = `${-fr[0] * S}px ${-fr[1] * S}px`;
   }
 
+  const getOn = def.getOn || [];
+  const getOff = def.getOff || [];
+  const slowDown = def.slowDown || [];
+  // Loop-only vignettes (no scripted entry/exit) fade in and out instead.
+  const fade = !getOn.length && !getOff.length;
+  frameEl.style.transition = "opacity 0.35s ease";
+  frameEl.style.opacity = fade ? "0" : "1";
+
   const runLoops = 2 + Math.floor(Math.random() * 3);
-  const sequence = [...def.getOn];
+  const sequence = [...getOn];
   for (let i = 0; i < runLoops; i++) sequence.push(...def.run);
-  sequence.push(...def.slowDown, ...def.getOff);
+  sequence.push(...slowDown, ...getOff);
 
   const frameMs = 1000 / (def.fps * record.fpsMult);
+  if (fade) {
+    show(sequence[0]);
+    void frameEl.offsetWidth;
+    frameEl.style.opacity = "1";
+  }
   for (const fr of sequence) {
     if (!record.alive || laserState.active) break;
     show(fr);
     await sleep(frameMs);
+  }
+  if (fade) {
+    frameEl.style.opacity = "0";
+    await sleep(360);
   }
   wrap.remove();
 }

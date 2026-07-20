@@ -12,6 +12,8 @@ import foodBowls from "./assets/critters/food-bowls.png";
 import emotionBubbles from "./assets/critters/emotion-bubbles.png";
 import orangeWheel from "./assets/critters/cat-orange-wheel.png";
 import greyTabbyWheel from "./assets/critters/cat-greytabby-wheel.png";
+import whiteActive from "./assets/critters/cat-white-active.png";
+import tsActive from "./assets/critters/cat-ts-active.png";
 
 // 8-row sheets: turn, walk, standBack, walk2, sit, sit2, prowl, sleep.
 function catActions8() {
@@ -124,9 +126,12 @@ export const CRITTERS = {
 };
 
 // Which breeds can play which prop-interaction vignettes (only breeds with
-// dedicated "active" sheets). Orange + grey tabby get the treadmill wheel.
+// dedicated "active" sheets). Orange + grey tabby run the wheel; white +
+// tortoiseshell scratch the post and play in the tunnel.
 CRITTERS.catOrange.interactions = ["wheel"];
 CRITTERS.catGreyTabby.interactions = ["wheel"];
+CRITTERS.catWhite.interactions = ["post", "tunnel"];
+CRITTERS.catTortoiseshell.interactions = ["post", "tunnel"];
 
 export const CAT_TYPES = [
   "catWhite",
@@ -182,7 +187,7 @@ export const INTERACTIONS = {
       sheet: orangeWheel,
       sheetW: 720,
       sheetH: 1488,
-      scale: 0.62,
+      scale: 0.57,
       fps: 7,
       getOn: [[13, 416, 169, 133], [178, 416, 179, 134], [392, 413, 138, 134], [564, 413, 138, 134], [25, 585, 136, 133], [204, 584, 139, 134]],
       run: [[27, 778, 129, 131], [206, 778, 130, 131], [386, 778, 130, 131], [566, 778, 130, 131], [27, 953, 129, 131], [206, 953, 130, 131], [386, 953, 130, 131], [566, 953, 130, 133]],
@@ -193,12 +198,65 @@ export const INTERACTIONS = {
       sheet: greyTabbyWheel,
       sheetW: 1440,
       sheetH: 2976,
-      scale: 0.33,
+      scale: 0.285,
       fps: 7,
       getOn: [[31, 833, 329, 261], [360, 837, 350, 257], [789, 830, 265, 256], [1132, 830, 266, 256], [54, 1174, 263, 256], [414, 1174, 264, 256]],
       run: [[58, 1559, 250, 254], [417, 1560, 251, 253], [778, 1560, 250, 254], [1137, 1560, 250, 253], [58, 1910, 250, 254], [417, 1910, 251, 254], [778, 1911, 250, 253], [1137, 1911, 249, 253]],
       slowDown: [[72, 2370, 218, 156], [477, 2356, 139, 170], [803, 2374, 201, 152], [1142, 2277, 242, 249]],
       getOff: [[58, 2640, 240, 246], [339, 2640, 238, 246], [617, 2640, 246, 246], [931, 2677, 189, 209], [1152, 2688, 229, 198]],
+    },
+  },
+
+  // Scratching post — the cat's own walk-in is the approach; the vignette is the
+  // clean scratch loop (getOn/slowDown/getOff empty; the player fades it in/out).
+  post: {
+    catWhite: {
+      sheet: whiteActive,
+      sheetW: 2692,
+      sheetH: 1568,
+      scale: 0.54,
+      fps: 5,
+      getOn: [],
+      run: [[30, 394, 167, 185], [210, 394, 176, 185], [406, 394, 176, 185], [600, 394, 178, 185], [794, 394, 179, 185], [994, 394, 172, 185], [1189, 394, 168, 185], [1379, 394, 168, 185]],
+      slowDown: [],
+      getOff: [],
+    },
+    catTortoiseshell: {
+      sheet: tsActive,
+      sheetW: 1024,
+      sheetH: 596,
+      scale: 1.39,
+      fps: 5,
+      getOn: [],
+      run: [[11, 149, 65, 72], [80, 149, 67, 72], [153, 149, 69, 72], [227, 149, 69, 72], [302, 149, 68, 72], [377, 149, 67, 72], [450, 149, 67, 72], [524, 149, 65, 72]],
+      slowDown: [],
+      getOff: [],
+    },
+  },
+
+  // Play tunnel — cat pokes head/tail in and out of a short tube (loop).
+  tunnel: {
+    catWhite: {
+      sheet: whiteActive,
+      sheetW: 2692,
+      sheetH: 1568,
+      scale: 0.45,
+      fps: 4,
+      getOn: [],
+      run: [[215, 1108, 191, 190], [406, 1108, 191, 190], [597, 1108, 191, 190], [788, 1108, 191, 190], [979, 1108, 191, 190], [1170, 1108, 191, 190], [1361, 1108, 191, 190], [1552, 1108, 191, 190], [1743, 1108, 191, 190], [1934, 1108, 191, 190], [2125, 1108, 191, 190], [2316, 1108, 191, 190], [2507, 1108, 185, 190]],
+      slowDown: [],
+      getOff: [],
+    },
+    catTortoiseshell: {
+      sheet: tsActive,
+      sheetW: 1024,
+      sheetH: 596,
+      scale: 1.42,
+      fps: 4,
+      getOn: [],
+      run: [[8, 440, 63, 48], [80, 440, 72, 54], [156, 440, 72, 54], [231, 440, 70, 54], [303, 443, 71, 51], [376, 440, 70, 54], [448, 440, 71, 54], [521, 440, 70, 54], [594, 443, 70, 51], [666, 443, 70, 51], [738, 443, 71, 51], [811, 443, 76, 51], [888, 449, 136, 40]],
+      slowDown: [],
+      getOff: [],
     },
   },
 };
