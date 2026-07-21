@@ -598,6 +598,14 @@ function runLaserEvents(container, laserState, getZones) {
 function runSun(container, sunState) {
   const el = document.createElement("div");
   el.className = "sunspot";
+  // A slowly-spinning circular wordmark inside the glow. Cats render on a higher
+  // layer and pass right over the text — intentional.
+  const label = "QRitty SunSpot™ · ";
+  el.innerHTML =
+    `<svg class="sunspot-mark" viewBox="0 0 100 100" aria-hidden="true">` +
+    `<defs><path id="sunspot-ring" d="M 50,50 m -33,0 a 33,33 0 1,1 66,0 a 33,33 0 1,1 -66,0"/></defs>` +
+    `<text><textPath href="#sunspot-ring" startOffset="0">${label.repeat(4)}</textPath></text>` +
+    `</svg>`;
   container.appendChild(el); // appended before cats → renders behind them
   const HALF_PERIOD = 82000; // ms for one pass down-and-around
 
