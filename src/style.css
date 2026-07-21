@@ -47,15 +47,15 @@
   font-display: swap;
 }
 
-/* Satoshi Bold — all headers/labels except the QRitty Cat wordmark. */
+/* Satoshi (variable) — body/selection copy, used at regular-ish weights. */
 @font-face {
   font-family: "Satoshi";
-  src: url("/fonts/Satoshi-Bold.woff2") format("woff2");
-  font-weight: 700;
+  src: url("/fonts/Satoshi-Variable.woff2") format("woff2");
+  font-weight: 300 900;
   font-display: swap;
 }
 
-/* Erode (variable) — body copy, used at regular weight. */
+/* Erode (variable) — headers/announcements, used bold. */
 @font-face {
   font-family: "Erode";
   src: url("/fonts/Erode-Variable.woff2") format("woff2");
@@ -78,8 +78,8 @@
   --border: #e2e6e0;
   --shadow: 0 20px 45px -25px rgba(15, 18, 20, 0.55);
   --font-wordmark: "Array", system-ui, sans-serif; /* only "QRitty Cat" */
-  --font-head: "Satoshi", system-ui, sans-serif; /* all other headers/labels */
-  --font-body: "Erode", Georgia, serif; /* body copy */
+  --font-head: "Erode", Georgia, serif; /* headers/announcements (Erode bold) */
+  --font-body: "Satoshi", system-ui, sans-serif; /* selection/body copy */
   color-scheme: light;
 }
 

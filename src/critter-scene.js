@@ -157,14 +157,15 @@ function showEmotion(record) {
   bubble.style.backgroundSize = `${sprite.sheetW * scale}px ${sprite.sheetH * scale}px`;
   bubble.style.backgroundPosition = `-${sprite.x * scale}px -${sprite.y * scale}px`;
   bubble.style.left = `${headCenterPx + sideNudge}px`;
-  // Bubble's bottom rests `gap` px above the head top; it grows upward.
+  // Bubble's bottom rests `gap` px above the head top; it grows upward. It is
+  // NEVER mirrored — the bubble always reads upright/forwards no matter which
+  // way the cat faces (only its side-nudge follows the facing).
   bubble.style.top = `${headTopPx - gap - displayH}px`;
-  const flip = facingRight ? -1 : 1;
-  bubble.style.transform = `translate(-50%, 6px) scaleX(${flip})`;
+  bubble.style.transform = `translate(-50%, 6px)`;
   record.wrapper.appendChild(bubble);
   void bubble.offsetWidth;
   bubble.style.opacity = "1";
-  bubble.style.transform = `translate(-50%, 0) scaleX(${flip})`;
+  bubble.style.transform = `translate(-50%, 0)`;
   setTimeout(() => {
     bubble.style.opacity = "0";
     setTimeout(() => bubble.remove(), 300);
@@ -208,9 +209,10 @@ function pickStopTarget(zones, activeCats, self) {
     const x = randRange(EDGE_X, 100 - EDGE_X);
     const y = randRange(EDGE_Y, 100 - EDGE_Y);
     if (inZone(x, y, zones)) continue;
-    // Count how many other cats already sit within a cat's-width of here.
+    // Count how many other cats already sit near here (a generous cat-and-a-half
+    // so resting cats keep clear personal space).
     const crowd = activeCats.reduce(
-      (n, o) => n + (o !== self && o.alive && Math.abs(o.x - x) < 8 && Math.abs(o.y - y) < 8 ? 1 : 0),
+      (n, o) => n + (o !== self && o.alive && Math.abs(o.x - x) < 10 && Math.abs(o.y - y) < 10 ? 1 : 0),
       0
     );
     if (crowd === 0) return { x, y };
@@ -227,7 +229,7 @@ function pickStopTarget(zones, activeCats, self) {
 // Nudge a desired settle point off any spot already taken by another cat (or a
 // box), spiralling outward until a clear slot is found. This is what keeps cats
 // from piling onto the same pixel at an attractor (the sun, a bowl, the laser).
-function avoidCats(x, y, record, activeCats, zones, minGap = 7) {
+function avoidCats(x, y, record, activeCats, zones, minGap = 9) {
   const clampX = (v) => Math.max(EDGE_X, Math.min(100 - EDGE_X, v));
   const clampY = (v) => Math.max(EDGE_Y, Math.min(100 - EDGE_Y, v));
   const cx = clampX(x);
@@ -292,10 +294,29 @@ function vignetteRect(container, def, gx, gy) {
   return { l: gx - wpct / 2, t: gy - hpct, r: gx + wpct / 2, b: gy };
 }
 
-// All live obstacle rects: persistent props + any vignette currently playing.
-function obstacleRects(propList, vignetteList) {
+// A prop's CURRENT on-screen rect, read live from its element (robust even if
+// the stage measured 0 at spawn time, which made stored rects too small and let
+// a tunnel/wheel land on the tree).
+function propLiveRect(container, el) {
+  const cr = container.getBoundingClientRect();
+  if (cr.width < 10 || cr.height < 10) return null;
+  const r = el.getBoundingClientRect();
+  return {
+    l: ((r.left - cr.left) / cr.width) * 100,
+    t: ((r.top - cr.top) / cr.height) * 100,
+    r: ((r.right - cr.left) / cr.width) * 100,
+    b: ((r.bottom - cr.top) / cr.height) * 100,
+  };
+}
+
+// All live obstacle rects: persistent props (measured live) + any vignette
+// currently playing.
+function obstacleRects(container, propList, vignetteList) {
   const out = [];
-  for (const p of propList) if (p.rect) out.push(p.rect);
+  for (const p of propList) {
+    const live = p.el && p.el.isConnected ? propLiveRect(container, p.el) : null;
+    out.push(live || p.rect);
+  }
   for (const v of vignetteList) out.push(v);
   return out;
 }
@@ -335,7 +356,7 @@ async function chaseLaser(record, laserState, getZones, activeCats) {
     let { x: tx, y: ty } = avoidCats(
       laserState.x + Math.cos(ang) * rad,
       laserState.y + Math.sin(ang) * rad,
-      record, activeCats, zones, 6
+      record, activeCats, zones, 7
     );
     if (inZone(tx, ty, zones)) {
       tx = laserState.x;
@@ -364,7 +385,7 @@ function baskAction(config) {
 async function baskInSun(record, sunState, laserState, zones, activeCats) {
   // Park at a clear spot within the warm pool — avoidCats fans the sun-seekers
   // out around the sunspot instead of stacking them on the exact same pixel.
-  let target = avoidCats(sunState.x, sunState.y, record, activeCats, zones, 7);
+  let target = avoidCats(sunState.x, sunState.y, record, activeCats, zones, 8.5);
   playAction(record, pick(record.config.walkActions));
   await moveAvoiding(record, target.x, target.y, zones, 1.7);
 
@@ -378,7 +399,7 @@ async function baskInSun(record, sunState, laserState, zones, activeCats) {
     const signal = await waitInterruptible(randRange(3200, 5500), record, laserState);
     if (signal !== "done") break;
     if (Math.hypot(sunState.x - target.x, sunState.y - target.y) > 14) {
-      target = avoidCats(sunState.x, sunState.y, record, activeCats, zones, 7);
+      target = avoidCats(sunState.x, sunState.y, record, activeCats, zones, 8.5);
       playAction(record, pick(record.config.walkActions));
       await moveAvoiding(record, target.x, target.y, zones, 2.2);
       playAction(record, pose);
@@ -449,20 +470,22 @@ async function useInteraction(record, kind, getZones, laserState, propList, vign
   if (!def) return;
   const zones = getZones();
   const container = record.wrapper.parentElement;
-  const obstacles = obstacleRects(propList, vignetteList);
-  let gx = record.x;
-  let gy = Math.min(100 - EDGE_Y, Math.max(EDGE_Y + 10, record.y));
+  const obstacles = obstacleRects(container, propList, vignetteList);
   // Find a spot that's clear of the menus AND of any toy/tree/other vignette.
-  for (let i = 0; i < 16; i++) {
+  let gx, gy, placed = false;
+  for (let i = 0; i < 24; i++) {
     const cx = randRange(EDGE_X + 6, 100 - EDGE_X - 6);
     const cy = randRange(EDGE_Y + 12, 100 - EDGE_Y);
     if (inZone(cx, cy, zones)) continue;
     const r = vignetteRect(container, def, cx, cy);
-    if (obstacles.some((o) => rectsOverlap(o, r))) continue;
+    if (obstacles.some((o) => rectsOverlap(o, r, 2))) continue;
     gx = cx;
     gy = cy;
+    placed = true;
     break;
   }
+  // No clear spot right now — skip the toy rather than overlap the tree/a bowl.
+  if (!placed) return;
   playAction(record, pick(record.config.walkActions));
   await moveAvoiding(record, gx, gy, zones);
   if (!record.alive) return;
@@ -638,7 +661,7 @@ function runPropEvents(container, getZones, propList, vignetteList) {
     const prop = pick(PROPS);
     const scale = prop.displayH / prop.h;
     const zones = getZones();
-    const obstacles = obstacleRects(propList, vignetteList);
+    const obstacles = obstacleRects(container, propList, vignetteList);
     // Find a spot clear of the menus, on-stage, and not overlapping any other
     // toy/tree/vignette. If nothing's free this round, skip — try again later.
     let x, y, rect, placed = false;
@@ -701,7 +724,7 @@ async function visitProp(record, propList, getZones, laserState, activeCats) {
   const zones = getZones();
   // Hang out beside the prop, but on a spot no other cat is already using.
   const side = Math.random() < 0.5 ? -4 : 4;
-  const { x: tx, y: ty } = avoidCats(prop.x + side, prop.y + randRange(0, 2.5), record, activeCats, zones, 6);
+  const { x: tx, y: ty } = avoidCats(prop.x + side, prop.y + randRange(0, 2.5), record, activeCats, zones, 7.5);
   if (inZone(tx, ty, zones)) return;
   playAction(record, pick(record.config.walkActions));
   await moveAvoiding(record, tx, ty, zones);
@@ -766,8 +789,9 @@ export function initCritterScene(container, zoneSelectors = [".controls-square",
       emoteChance: randRange(0.28, 0.72),
       relocateChance: randRange(0.14, 0.48),
       propChance: randRange(0.22, 0.52),
-      // Roughly half are sun-lovers; those that are get their own pull strength.
-      sunLove: Math.random() < 0.5 ? randRange(0.4, 0.8) : 0,
+      // Most cats are sun-lovers now (Erik wants the sunspot busier); those that
+      // are get their own — fairly strong — pull toward it.
+      sunLove: Math.random() < 0.72 ? randRange(0.55, 0.92) : 0,
       // Cats with a signature toy (wheel / post+tunnel / yarn) reach for it a
       // LOT — it's their thing — so it shows up often for them specifically.
       interactChance: canInteract ? randRange(0.5, 0.82) : 0,
