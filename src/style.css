@@ -97,9 +97,22 @@ body {
   font-family: var(--font-body);
   font-size: 16px;
   color: var(--ink);
-  background: radial-gradient(circle at 50% -15%, #a1a6a8 0%, var(--bg) 55%, var(--bg-deep) 100%);
+  background: var(--bg-deep); /* fallback behind the meadow */
   height: 100vh;
   overflow: hidden;
+}
+
+/* Pixel-art meadow backdrop — sits behind the cats (critter-stage z-index 0)
+   and the panels (z-index 1). Isolated on a pseudo-element so image-rendering
+   doesn't leak to the QR / UI. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: url("/qritty-bg.webp") center center / cover no-repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
 }
 
 #app {
